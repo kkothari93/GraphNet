@@ -1,4 +1,6 @@
 #include "cudakernels.h"
+#include <stdio.h>
+#include "vel.h"
 
 #ifndef __params__
 #define Z_MAX 10
@@ -14,12 +16,12 @@
 #define TIME_STEP 1e-4
 #endif
 
+__device__ static float vel[2] = {vel_x, vel_y};
 
 
 __device__ float kfe_cuda(float force){
 	float result;
 	result = expf(force*delxe/kB/T)*TIME_STEP;
-
 	return result;
 }
 
@@ -164,14 +166,26 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 		edges[pair + 1] = SPCL_NUM;
 	}
 
+	// update the force in the array
 	if(tid<n_tnodes){
-		int n_t =  
-
+		int n_t = tnodes[tid];
+		float top_force_x = forces[DIM*n_t];
+		float top_force_y = forces[DIM*n_t + 1];
+		atomicAdd(&plate_force[iter*DIM], top_force_x);
+		atomicAdd(&plate_force[iter*DIM + 1], top_force_y);
 	}
+
+	// move top nodes acc. to velocity
+	if(tid < DIM*n_tnodes && tid >= n_tnodes){
+		int n_t = tnodes[tid - n_tnodes];
+		R[DIM*n_t] += vel[0]*TIME_STEP;
+		R[DIM*n_t + 1] += vel[1]*TIME_STEP;
+	}
+	__syncthreads();
 }
 
 
-void pull_CUDA(hostvars *vars, int n_iter){
+void pull_CUDA(hostvars* vars, int max_iter){
 	// Pass all host variables in a struct
 	
 	// Initialize nodes and edges
@@ -183,7 +197,13 @@ void pull_CUDA(hostvars *vars, int n_iter){
 	bool* PBC_d;
 	float* L_d; float* damage_d;
 	float* pull_forces_d;
-	const float* PBC_vector_d;
+	float* PBC_vector_d;
+	int n_nodes = vars->n_nodes;
+	int n_elems = vars->n_elems;
+	int n_tside = vars->n_tnodes;
+	int n_bside = vars->n_bnodes;
+	int max_nodes_on_a_side = vars->n_side_nodes;
+	int STEPS = max_iter;
 	
 	// GPU allocations
 	cudaMalloc((void**)&R_d, n_nodes*DIM*sizeof(float));
@@ -200,36 +220,55 @@ void pull_CUDA(hostvars *vars, int n_iter){
 	cudaMalloc((void**)&pull_forces_d, STEPS*DIM*sizeof(float));
 
 	// Copy host to device
-	cudaMemcpy(PBC_vector_d, vars.PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(R_d, vars.R, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(forces_d, vars.forces, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(edges_d, vars.edges, Z_MAX*n_nodes*2*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(bsideNodes_d, vars.bsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(tsideNodes_d, vars.tsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(lsideNodes_d, vars.lsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(rsideNodes_d, vars.rsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(PBC_d, vars.PBC, 2*n_elems*sizeof(bool), cudaMemcpyHostToDevice);
-	cudaMemcpy(PBC_vector_d, vars.PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(L_d, vars.L, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(damage_d, vars.damage, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(pull_forces_d, vars.pull_forces, STEPS*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(PBC_vector_d, vars->PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(R_d, vars->R, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(forces_d, vars->forces, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(edges_d, vars->edges, Z_MAX*n_nodes*2*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(bsideNodes_d, vars->bsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(tsideNodes_d, vars->tsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(lsideNodes_d, vars->lsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(rsideNodes_d, vars->rsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(L_d, vars->L, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(damage_d, vars->damage, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(pull_forces_d, vars->pull_forces, STEPS*DIM*sizeof(float), cudaMemcpyHostToDevice);
 
 	// Define grid and block size
 	// Launch atleast as many threads as edges
 	dim3 gridsize((n_elems-1)/BLOCK_SIZE + 1);
 	dim3 blocksize(BLOCK_SIZE);
 
-	for(int i = 1; i<=n_iter; i++){
-		optimize<<< gridsize, blocksize >>>(
+	for(int i = 1; i<=STEPS; i++){
+		optimize_cuda<<< gridsize, blocksize >>>(
 			R_d, edges_d, damage_d, forces_d, \
 			L_d, n_nodes, n_elems, PBC_d, \
 			PBC_vector_d, tsideNodes_d, n_tside, \
 			bsideNodes_d, n_bside, \
-			pull_forces_d, iter);
+			pull_forces_d, i);
 		cudaDeviceSynchronize();
 
-		// get_components();
-
-		// move_top_nodes();
+		if(i%500 == 0){
+			printf("Completed %d iterations...\n",i);
+		}
 	}
+
+	// Copy device to host
+	cudaMemcpy(vars->R, R_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->forces, forces_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->damage, damage_d,  2*n_elems*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->pull_forces, pull_forces_d,  STEPS*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+
+	// Free up global memory
+	cudaFree(R_d);
+	cudaFree(forces_d);
+	cudaFree(edges_d);
+	cudaFree(bsideNodes_d);
+	cudaFree(tsideNodes_d);
+	cudaFree(lsideNodes_d);
+	cudaFree(rsideNodes_d);
+	cudaFree(PBC_d);
+	cudaFree(PBC_vector_d);
+	cudaFree(L_d);
+	cudaFree(damage_d);
+	cudaFree(pull_forces_d);
+
 }
