@@ -38,11 +38,9 @@
 #define delxe 0.15 							// parameter for breaking crosslink connection
 #define BLOCK_SIZE 1024
 
-#if USE_CUDA
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include "cudakernels.h"
-#endif
 
 static float vel[2] = {vel_x, vel_y};
 
@@ -582,27 +580,16 @@ int main(){
 	int iter = 0; // needed to write forces later
 
 	if(USE_CUDA){
+		// pull on CUDA
 		pull_CUDA(&vars, STEPS);
 	}
 	else{
 		// pull on host
 		for(iter = 0; iter<STEPS; iter++){
-			// if((iter+1)%1000 == 0 && iter > 0){ // +1 required to have values in p_x, p_y
-			// 	cout<<(iter+1)<<endl; 
-			// 	cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
-			// 	t = clock();  // reset clock
-
-			// 	// plot network
-			// 	plot_network(gnetwork, R, edges, PBC, \
-			// 	 	n_nodes, n_elems, iter);
-				
-			// 	// Plot forces
-			// 	plot_forces(gforces, p_x, p_y, iter);
-
-
-			// }
-			if((iter+1)%1000 == 0 ){
-				cout<<"Finished %d iterations...\n"<<(iter+1);
+			if((iter+1)%500 == 0 ){
+				printf("Finished %d iterations...\n",(iter+1));
+				printf("That took %0.5f s\n", float(clock()-t)/CLOCKS_PER_SEC);
+				t = clock();
 			}
 
 			optimize(R, edges, damage, L, n_nodes, n_elems,\
