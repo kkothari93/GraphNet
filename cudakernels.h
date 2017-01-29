@@ -13,7 +13,7 @@ struct hostvars{
 	float* L_d; float* damage_d;
 	float* pull_forces_d;
 	const float* PBC_vector_d;
-}
+};
 
 void optimize(float*, int*, float*, float*, \
 	const float*, const int, const int, \
