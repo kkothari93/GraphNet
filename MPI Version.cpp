@@ -116,6 +116,16 @@ int main() {
   	int name_len;
   	MPI_Get_processor_name(processor_name, &name_len);
 
+  	int number_of_edges_per_process = Z_MAX*n_nodes*2/world_size;
+  	int * edges_this_process = new int[number_of_edges_per_process];
+
+  	int k = 0;
+  	for (int i = number_of_edges_per_process * world_rank; i < min(number_of_edges_per_process * (world_rank+1), Z_MAX*n_nodes*2); i++) {
+
+  		edges_this_process[k] = edges[i];
+  		k++;
+
+  	}
 
 
 
@@ -134,7 +144,6 @@ int main() {
 
 
 
-
-
+  	MPI_Finalize();
 
 }

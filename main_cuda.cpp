@@ -12,7 +12,7 @@
 
 #include "gnuplot_i.hpp"
 #include "input.h"
-#include "cudakernels.h"
+#include "vel.h"
 
 #define __params__
 
@@ -38,12 +38,11 @@
 #define delxe 0.15 							// parameter for breaking crosslink connection
 #define BLOCK_SIZE 1024
 
-#if USE_CUDA
 #include <cuda.h>
 #include <cuda_runtime_api.h>
-#endif
+#include "cudakernels.h"
 
-static float vel[DIM] = {0.0, 100.0};
+static float vel[2] = {vel_x, vel_y};
 
 inline float getnorm(const float* vec, const int dim = DIM){
 	float s = 0;
@@ -346,28 +345,6 @@ void move_top_nodes(float* R, int* tnodes, int n_tnodes){
 	}
 }
 
-// void convert_neighbors_for_cuda(float* cuda_props, int* neighbors, float* R,  const int n){
-	
-// 	std::default_random_engine generator;
-//   	std::normal_distribution<float> distribution(L_MEAN,L_STD);
-// 	int i,j,k = 0;
-// 	int neighbor_id;
-// 	int source_id, dest_id;
-// 	for(i; i<n; i++){
-// 		for(j; j<Z_MAX; j++){
-// 			source_id = i*Z_MAX + j;
-// 			if (neighbors[source_id] != -1){
-// 				neighbor_id = neighbors[source_id];
-// 				dest_id = i*Z_MAX*(DIM+1);
-// 				for(k;k<DIM;k++){
-// 					cuda_props[dest_id + k] = R[neighbor_id*DIM+k];
-// 				}
-// 				//Update L
-// 				cuda_props[dest_id + DIM] = distribution(generator);
-// 			}
-// 		}
-// 	}
-// }
 
 void get_file(const string& filename, float* arr, \
 	int n_dim, int n_nodes){
@@ -523,6 +500,7 @@ int main(){
 
 	// Initialize nodes and edges
 	float* R = (float*)malloc(n_nodes*DIM*sizeof(float));
+	float* forces = (float*)malloc(n_nodes*DIM*sizeof(float));
 	int* edges = (int*)malloc(Z_MAX*n_nodes*2*sizeof(int));
 	float* pull_forces = (float*)malloc(STEPS*DIM*sizeof(float));
 
@@ -573,6 +551,22 @@ int main(){
 	// GPU copy packing
 	hostvars vars;
 	vars.PBC_vector = PBC_vector;
+	vars.R = R; 
+	vars.edges = edges;
+	vars.forces = forces;
+	vars.bsideNodes = bsideNodes; 
+	vars.tsideNodes = tsideNodes;
+	vars.lsideNodes = lsideNodes; 
+	vars.rsideNodes = rsideNodes;
+	vars.PBC = PBC;
+	vars.L = L; 
+	vars.damage = damage;
+	vars.pull_forces = pull_forces;
+	vars.n_nodes = n_nodes; 
+	vars.n_elems = n_elems;
+	vars.n_tnodes = n_tside; 
+	vars.n_bnodes = n_bside;
+	vars.n_side_nodes = max_nodes_on_a_side;
 
 	// gnuplots
 	Gnuplot gforces("lines lw 2");
@@ -585,34 +579,28 @@ int main(){
 	
 	int iter = 0; // needed to write forces later
 
-	for(iter = 0; iter<STEPS; iter++){
-		if((iter+1)%1 == 0 && iter > 0){ // +1 required to have values in p_x, p_y
-			cout<<(iter+1)<<endl; 
-			cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
-			t = clock();  // reset clock
+	if(USE_CUDA){
+		// pull on CUDA
+		pull_CUDA(&vars, STEPS);
+	}
+	else{
+		// pull on host
+		for(iter = 0; iter<STEPS; iter++){
+			if((iter+1)%500 == 0 ){
+				printf("Finished %d iterations...\n",(iter+1));
+				printf("That took %0.5f s\n", float(clock()-t)/CLOCKS_PER_SEC);
+				t = clock();
+			}
 
-			// plot network
-			plot_network(gnetwork, R, edges, PBC, \
-			 	n_nodes, n_elems, iter);
-			
-			// Plot forces
-			plot_forces(gforces, p_x, p_y, iter);
-
-
-		}
-		if(USE_CUDA){
-			wrapper_optimize(vars);
-		}
-		else{
 			optimize(R, edges, damage, L, n_nodes, n_elems,\
 				PBC, PBC_vector, tsideNodes, n_tside, bsideNodes, n_bside,\
 				pull_forces, iter);
+			
+			get_components(p_x, p_y, pull_forces, iter);
+
+			move_top_nodes(R, tsideNodes, n_tside);
 		}
-		get_components(p_x, p_y, pull_forces, iter);
-
-		move_top_nodes(R, tsideNodes, n_tside);
 	}
-
 	
 	char rand_string[] = "forcesxxxxxx.txt";
 	gen_random(rand_string, 6);
@@ -630,14 +618,6 @@ int main(){
 	free(PBC);
 	free(R); free(edges);
 	free(L); free(damage);	
-	
-	// free all variables on GPU
-	cudaFree(pull_forces_d);
-	cudaFree(bsideNodes_d); cudaFree(tsideNodes_d);
-	cudaFree(lsideNodes_d); cudaFree(rsideNodes_d);
-	cudaFree(PBC_d);
-	cudaFree(R_d); cudaFree(edges_d);
-	cudaFree(L_d); cudaFree(damage_d);
 
 	return 0;
 }

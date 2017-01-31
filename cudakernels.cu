@@ -1,4 +1,7 @@
 #include "cudakernels.h"
+#include <stdio.h>
+#include "vel.h"
+#include <time.h>
 
 #ifndef __params__
 #define Z_MAX 10
@@ -14,12 +17,12 @@
 #define TIME_STEP 1e-4
 #endif
 
+__device__ static float vel[2] = {vel_x, vel_y};
 
 
 __device__ float kfe_cuda(float force){
 	float result;
 	result = expf(force*delxe/kB/T)*TIME_STEP;
-
 	return result;
 }
 
@@ -47,13 +50,14 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 	const float* chain_len, const int num_nodes, const int num_edges, \
 	const bool* PBC_STATUS, const float* PBC_vector, \
 	const int* tnodes, int n_tnodes, const int* bnodes, int n_bnodes, \
-	float* plate_force, int iter,\
+	float* plate_force, int max_steps,\
 	float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 
 	// Get indices
 	int tx = threadIdx.x; 
 	int bx = blockIdx.x;
 	int tid = tx + bx*BLOCK_SIZE;
+	clock_t t = clock();
 
 	float rms_history[2] = {0.0, 0.0};
 	float delR[2] = {0.0, 0.0};
@@ -62,116 +66,135 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 	int pair, edge_num, n1, n2;
 	float L, x1, x2, y1, y2, dist, force, diss_energy;
 	float unitvector[DIM];
+	for(int iter = 0; iter<max_steps; iter++){
+		for(int step = 0; step < max_iter; step++){
+			///////////////////////////////////////////////
+			// Force calculations
+			// 
+			// Here each edge is assigned one thread
+			//
+			///////////////////////////////////////////////
 
-	for(int step = 0; step < max_iter; step++){
-		///////////////////////////////////////////////
-		// Force calculations
-		// 
-		// Here each edge is assigned one thread
-		//
-		///////////////////////////////////////////////
+			// Assign threads to edges
+			pair = tid * 2;
+			edge_num = tid; 
+			L = chain_len[edge_num];
 
-		// Assign threads to edges
-		pair = tid * 2;
-		edge_num = tid; 
-		L = chain_len[edge_num];
+			// read the nodes that the thread has been assigned
+			n1 = edges[pair];
+			n2 = edges[pair+1];
 
-		// read the nodes that the thread has been assigned
-		n1 = edges[pair];
-		n2 = edges[pair+1];
+			// Check if connection exists 
+			if(n1!=SPCL_NUM || n2 != SPCL_NUM){
+				// read the positions of the crosslinkers
+				x1 = R[n1*DIM];
+				y1 = R[n1*DIM + 1];
+				x2 = R[n2*DIM];
+				y2 = R[n2*DIM + 1];
 
-		// Check if connection exists 
-		if(n1!=SPCL_NUM || n2 != SPCL_NUM){
-			// read the positions of the crosslinkers
-			x1 = R[n1*DIM];
-			y1 = R[n1*DIM + 1];
-			x2 = R[n2*DIM];
-			y2 = R[n2*DIM + 1];
+				// Calculate distance, unit vector and force
+				// Shared memory is per block. If num_edges*DIM is too large each block
+				// can be held responsible for separate pairs and then atomic adds can 
+				// be done. Another approach could be to have each thread implement force
+				// calc for one node to avoid atomic adds but that requires each thread to 
+				// run through all edges and figure out which ones to add. That will be order
+				// n whereas atomic adds should be order z extra work
 
-			// Calculate distance, unit vector and force
-			// Shared memory is per block. If num_edges*DIM is too large each block
-			// can be held responsible for separate pairs and then atomic adds can 
-			// be done. Another approach could be to have each thread implement force
-			// calc for one node to avoid atomic adds but that requires each thread to 
-			// run through all edges and figure out which ones to add. That will be order
-			// n whereas atomic adds should be order z extra work
+				// check for PBC;
+				if(PBC_STATUS[edge_num]==true){
+					dist = hypot(x1-x2-PBC_vector[0], y1-y2-PBC_vector[1]);
+				}
+				else{
+					dist = hypot(x1-x2, y1-y2);
+				}
 
-			// check for PBC;
-			if(PBC_STATUS[edge_num]==true){
-				dist = hypot(x1-x2-PBC_vector[0], y1-y2-PBC_vector[1]);
+				// add unitvector 3 for DIM 3. __in future use for loop here
+				unitvector[0] = (x1 - x2)/dist;
+				unitvector[1] = (y1 - y2)/dist;
+
+
+				// calculate force
+				force = force_wlc_cuda(dist, L);
+
+				// zero all forces
+				if(tid<num_nodes*DIM){
+					forces[tid] = 0.0;
+				}
+
+				//required before next step
+				__syncthreads();
+
+				// add the forces calculated to the nodes (atomic add)
+				atomicAdd(&forces[n1], force*unitvector[0]);
+				atomicAdd(&forces[n1+1], force*unitvector[1]);
+
+				atomicAdd(&forces[n2], force*unitvector[0]);
+				atomicAdd(&forces[n2+1], force*unitvector[1]);
+
+				__syncthreads();
 			}
-			else{
-				dist = hypot(x1-x2, y1-y2);
+
+			/////////////////////////////////////////////////
+			//
+			// Optimization step
+			//
+			/////////////////////////////////////////////////
+
+			// Assign each thread to nodes*DIM
+			if(tid<num_nodes && \
+				notmember(tid, bnodes, n_bnodes, tnodes, n_tnodes)){
+				grad[0] = forces[tid*2];
+				grad[1] = forces[tid*2 + 1];
+				
+				rms_history[0] = alpha*rms_history[0] + (1-alpha)*grad[0]*grad[0];
+				rms_history[1] = alpha*rms_history[1] + (1-alpha)*grad[1]*grad[1];
+
+				delR[0] = eta*__frsqrt_rn(1.0/(rms_history[0] + 1.0e-6)) * grad[0];
+				delR[1] = eta*__frsqrt_rn(1.0/(rms_history[1] + 1.0e-6)) * grad[1];
+				
+				R[tid*2] += delR[0];
+				R[tid*2 + 1] += delR[1];
 			}
-
-			// add unitvector 3 for DIM 3. __in future use for loop here
-			unitvector[0] = (x1 - x2)/dist;
-			unitvector[1] = (y1 - y2)/dist;
-
-
-			// calculate force
-			force = force_wlc_cuda(dist, L);
-
-			// zero all forces
-			if(tid<num_nodes*DIM){
-				forces[tid] = 0.0;
-			}
-
-			//required before next step
-			__syncthreads();
-
-			// add the forces calculated to the nodes (atomic add)
-			atomicAdd(&forces[n1], force*unitvector[0]);
-			atomicAdd(&forces[n1+1], force*unitvector[1]);
-
-			atomicAdd(&forces[n2], force*unitvector[0]);
-			atomicAdd(&forces[n2+1], force*unitvector[1]);
-
 			__syncthreads();
 		}
 
-		/////////////////////////////////////////////////
-		//
-		// Optimization step
-		//
-		/////////////////////////////////////////////////
+		// Update damage integral
+		diss_energy = kfe_cuda(force)*TIME_STEP;
+		damage_integral[edge_num] += diss_energy;
 
-		// Assign each thread to nodes*DIM
-		if(tid<num_nodes && \
-			notmember(tid, bnodes, n_bnodes, tnodes, n_tnodes)){
-			grad[0] = forces[tid*2];
-			grad[1] = forces[tid*2 + 1];
-			
-			rms_history[0] = alpha*rms_history[0] + (1-alpha)*grad[0]*grad[0];
-			rms_history[1] = alpha*rms_history[1] + (1-alpha)*grad[1]*grad[1];
+		// Update edges acc. to damage
+		if(damage_integral[edge_num] > 1.0){
+			edges[pair] = SPCL_NUM;
+			edges[pair + 1] = SPCL_NUM;
+		}
 
-			delR[0] = eta*__frsqrt_rn(1.0/(rms_history[0] + 1.0e-6)) * grad[0];
-			delR[1] = eta*__frsqrt_rn(1.0/(rms_history[1] + 1.0e-6)) * grad[1];
-			
-			R[tid*2] += delR[0];
-			R[tid*2 + 1] += delR[1];
+		// update the force in the array
+		if(tid<n_tnodes){
+			int n_t = tnodes[tid];
+			float top_force_x = forces[DIM*n_t];
+			float top_force_y = forces[DIM*n_t + 1];
+			atomicAdd(&plate_force[iter*DIM], top_force_x);
+			atomicAdd(&plate_force[iter*DIM + 1], top_force_y);
+		}
+
+		// move top nodes acc. to velocity
+		if(tid < DIM*n_tnodes && tid >= n_tnodes){
+			int n_t = tnodes[tid - n_tnodes];
+			R[DIM*n_t] += vel[0]*TIME_STEP;
+			R[DIM*n_t + 1] += vel[1]*TIME_STEP;
 		}
 		__syncthreads();
-	}
-
-	// Update damage integral
-	diss_energy = kfe_cuda(force)*TIME_STEP;
-	damage_integral[edge_num] += diss_energy;
-
-	// Update edges acc. to damage
-	if(damage_integral[edge_num] > 1.0){
-		edges[pair] = SPCL_NUM;
-		edges[pair + 1] = SPCL_NUM;
-	}
-
-	if(tid<n_tnodes){
-		int n_t =  
-
+		
+		if(iter%500 == 0 && tid == 1){
+			printf("Completed %d iterations...\n",iter);
+			printf("That took %0.5f s\n", float(clock()-t)/CLOCKS_PER_SEC);
+			t = clock();
+		}
 	}
 }
 
 
-void pull_CUDA(hostvars *vars, int n_iter){
+void pull_CUDA(hostvars* vars, int max_iter){
 	// Pass all host variables in a struct
 	
 	// Initialize nodes and edges
@@ -183,7 +206,13 @@ void pull_CUDA(hostvars *vars, int n_iter){
 	bool* PBC_d;
 	float* L_d; float* damage_d;
 	float* pull_forces_d;
-	const float* PBC_vector_d;
+	float* PBC_vector_d;
+	int n_nodes = vars->n_nodes;
+	int n_elems = vars->n_elems;
+	int n_tside = vars->n_tnodes;
+	int n_bside = vars->n_bnodes;
+	int max_nodes_on_a_side = vars->n_side_nodes;
+	int STEPS = max_iter;
 	
 	// GPU allocations
 	cudaMalloc((void**)&R_d, n_nodes*DIM*sizeof(float));
@@ -200,36 +229,51 @@ void pull_CUDA(hostvars *vars, int n_iter){
 	cudaMalloc((void**)&pull_forces_d, STEPS*DIM*sizeof(float));
 
 	// Copy host to device
-	cudaMemcpy(PBC_vector_d, vars.PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(R_d, vars.R, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(forces_d, vars.forces, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(edges_d, vars.edges, Z_MAX*n_nodes*2*sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(bsideNodes_d, vars.bsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(tsideNodes_d, vars.tsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(lsideNodes_d, vars.lsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(rsideNodes_d, vars.rsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(PBC_d, vars.PBC, 2*n_elems*sizeof(bool), cudaMemcpyHostToDevice);
-	cudaMemcpy(PBC_vector_d, vars.PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(L_d, vars.L, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(damage_d, vars.damage, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(pull_forces_d, vars.pull_forces, STEPS*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(PBC_vector_d, vars->PBC_vector, DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(R_d, vars->R, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(forces_d, vars->forces, n_nodes*DIM*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(edges_d, vars->edges, Z_MAX*n_nodes*2*sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(bsideNodes_d, vars->bsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(tsideNodes_d, vars->tsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(lsideNodes_d, vars->lsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(rsideNodes_d, vars->rsideNodes, max_nodes_on_a_side*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(L_d, vars->L, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(damage_d, vars->damage, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(pull_forces_d, vars->pull_forces, STEPS*DIM*sizeof(float), cudaMemcpyHostToDevice);
 
 	// Define grid and block size
 	// Launch atleast as many threads as edges
 	dim3 gridsize((n_elems-1)/BLOCK_SIZE + 1);
 	dim3 blocksize(BLOCK_SIZE);
 
-	for(int i = 1; i<=n_iter; i++){
-		optimize<<< gridsize, blocksize >>>(
-			R_d, edges_d, damage_d, forces_d, \
-			L_d, n_nodes, n_elems, PBC_d, \
-			PBC_vector_d, tsideNodes_d, n_tside, \
-			bsideNodes_d, n_bside, \
-			pull_forces_d, iter);
-		cudaDeviceSynchronize();
+	// Launch timer code
+	clock_t t = clock();
 
-		// get_components();
+	optimize_cuda<<< gridsize, blocksize >>>(
+		R_d, edges_d, damage_d, forces_d, \
+		L_d, n_nodes, n_elems, PBC_d, \
+		PBC_vector_d, tsideNodes_d, n_tside, \
+		bsideNodes_d, n_bside, \
+		pull_forces_d, STEPS);
 
-		// move_top_nodes();
-	}
+	// Copy device to host
+	cudaMemcpy(vars->R, R_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->forces, forces_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->damage, damage_d,  2*n_elems*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->pull_forces, pull_forces_d,  STEPS*DIM*sizeof(float), cudaMemcpyDeviceToHost);
+
+	// Free up global memory
+	cudaFree(R_d);
+	cudaFree(forces_d);
+	cudaFree(edges_d);
+	cudaFree(bsideNodes_d);
+	cudaFree(tsideNodes_d);
+	cudaFree(lsideNodes_d);
+	cudaFree(rsideNodes_d);
+	cudaFree(PBC_d);
+	cudaFree(PBC_vector_d);
+	cudaFree(L_d);
+	cudaFree(damage_d);
+	cudaFree(pull_forces_d);
+
 }
