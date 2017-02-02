@@ -91,8 +91,8 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	string line;
 	ifstream source;
 	stringstream in_pos;
-	source.open("/media/konik/New Volume/Poly Network/GMSH templates/template2d.msh");
-
+	source.open("/Users/sahil1105/cpp11_code_with_cuda/template2d.msh");
+	//cout << __LINE__ << endl;
 	bool can_i_read_nodes= false,can_i_read_elems = false;
 	bool read_num_nodes = false, read_n_elems = false;
 
@@ -541,7 +541,7 @@ void Network::apply_crack(Crack const & crack) {
 
 int main() {
 
-
+	Network test_network("template2d.msh");
 	cout << "Compiled" << endl;
 }
 
