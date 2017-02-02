@@ -255,6 +255,7 @@ void pull_CUDA(hostvars* vars, int max_iter){
 		PBC_vector_d, tsideNodes_d, n_tside, \
 		bsideNodes_d, n_bside, \
 		pull_forces_d, STEPS);
+	cudaDeviceSynchronize();
 
 	// Copy device to host
 	cudaMemcpy(vars->R, R_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
