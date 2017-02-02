@@ -1,25 +1,35 @@
-#define __params__	
-#define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 10.0							// Std. deviation for contour lengths
-#define Z_MAX 10							// Max coordination number
-#define TOL 1e-6
-#define MAXBOUND 500.0
-#define L_MEAN 120.0						// Average for contour length
-#define L_STD 4.0	
+// #define __params__	
+// #define DIM 2								// Number of dimensions
+// #define TIME_STEP 1e-4						// Time step
+// #define SIM_TIME 10.0						// Simulation time
+// #define TOL 1e-6							// Tolerance
+// #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
+// #define L_MEAN 120.0f						// Average for contour length
+// #define L_STD 4.0f							// Std. deviation for contour lengths
+// #define Z_MAX 10							// Max coordination number
+// #define MAXBOUND 500.0f
 
-// Define constants
-#define __constants__
+// // Define constants
+// #define __constants__
 
-#define kB 1.38064852e-5					// Boltzmann constant
-#define b 0.1								// Persistence length
-#define T 300 								// Temperature
-#define ae 0.1 								// Strength of bond - includes activation energy
-#define delxe 0.15 							// parameter for breaking crosslink connection
-#define BLOCK_SIZE 1024
+// #define kB 1.38064852e-5					// Boltzmann constant
+// #define b 0.1								// Persistence length
+// #define T 300 								// Temperature
+// #define ae 0.1 								// Strength of bond - includes activation energy
+// #define delxe 0.15 							// parameter for breaking crosslink connection
+// #define BLOCK_SIZE 1024
 
-void side_nodes(double* R,\
+#include "Network.h"
+using namespace std;
+
+
+/******************************************************************************************************************************************************************************
+******************************************************************************************************************************************************************************/
+						/**HELPER FUNCTIONS**/
+
+void side_nodes(float* R,\
 	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\
-	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n, int DIM){
+	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
 	// make the list of side nodes
 	for(int i=0; i<n; i++){
 		if(fabs(R[i*DIM]-0.0)<TOL){lnodes[n_lside]=i; n_lside++;}
@@ -39,6 +49,18 @@ inline int get_num_vertices(int elem_type){
 		//case 7: return 5;
 		default: return -1;
 	}
+}
+
+inline bool contains(vector<int>& vec, int elem){
+	return (std::find(vec.begin(), vec.end(), elem) != vec.end());
+}
+
+inline float getnorm(const float* vec, const int dim = DIM){
+	float s = 0;
+	for (int j = 0; j<DIM; j++){
+		s += pow(vec[j], 2);
+	}
+	return sqrt(s);
 }
 
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges){
@@ -64,7 +86,7 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 	delete[] local_nodes;
 }
 
-void take_input(double* R, int* edges, int& num_nodes, int& n_elems, int DIM) {
+void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	
 	string line;
 	ifstream source;
@@ -82,7 +104,7 @@ void take_input(double* R, int* edges, int& num_nodes, int& n_elems, int DIM) {
 			getline(source, line);
 			num_nodes=stoi(line);
 			//cout<<"Number of nodes in the function "<<num_nodes<<"\n";
-			double r[3]; int id;
+			float r[3]; int id;
 			for(int i=0; i<num_nodes; i++){
 				getline(source, line);
 				in_pos<<line;
@@ -136,9 +158,9 @@ void take_input(double* R, int* edges, int& num_nodes, int& n_elems, int DIM) {
 	source.close();
 }
 
-void __init__(double* L, double* damage, bool* PBC, int n_elems){
+void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	std::normal_distribution<double> generator(L_MEAN, L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
 		damage[i] = 0.0;
@@ -146,57 +168,66 @@ void __init__(double* L, double* damage, bool* PBC, int n_elems){
 	}	
 }
 
-inline void normalize_vector(double* result, const double* vec, int DIM){
-	double norm = getnorm(vec);
+inline void normalize_vector(float* result, const float* vec){
+	float norm = getnorm(vec);
 	for (int i = 0; i<DIM; i++){
 		result[i] = vec[i] / norm;
 	}
 }
 
-inline void normalize_vector(double* vec, int DIM){
-	double norm = getnorm(vec);
+inline void normalize_vector(float* vec){
+	float norm = getnorm(vec);
 	for (int i = 0; i<DIM; i++){
 		vec[i] = vec[i] / norm;
 	}
 }
 
-inline void unitvector(double* result, double* r1, double* r2, int DIM = 2){
+inline void unitvector(float* result, float* r1, float* r2){
 	for (int j = 0; j<DIM; j++){
 		result[j] = r1[j] - r2[j];
 	}
-	normalize_vector(result, DIM);
+	normalize_vector(result);
 }
 
-inline double force_wlc(double x, double L){
-	double t = x / L;
+inline float force_wlc(float x, float L){
+	float t = x / L;
 	if (t < 0.99){ return kB*T / b * (t + 1.0 / 4.0 / pow((1 - t), 2) - 1.0 / 4.0); }
 	else { return 999999.0; }
 }
 
-inline void convert_to_vector(double* result, const double mag, const double* direction, int DIM){
+inline void convert_to_vector(float* result, const float mag, const float* direction){
 	for (int i = 0; i<DIM; i++){
 		result[i] = mag*direction[i];
 	}
 }
 
-void forcevector(double* result, double* r1, double* r2, double L, int DIM){
-	double rhat[DIM];
-	double s = dist(r1, r2);
-	unitvector(rhat, r1, r2, DIM);
-	double force = force_wlc(s, L);
-	convert_to_vector(result, force, rhat, DIM);
+inline float dist(const float* r1, const float* r2){
+	float s = 0.0;
+	for (int j = 0; j<DIM; j++){
+		s += pow(r1[j] - r2[j], 2.0);
+	}
+	return sqrt(s);
 }
 
-inline double kfe(double force_mag){
+void forcevector(float* result, float* r1, float* r2, float L){
+	float rhat[DIM];
+	float s = dist(r1, r2);
+	unitvector(rhat, r1, r2);
+	float force = force_wlc(s, L);
+	convert_to_vector(result, force, rhat);
+}
+
+
+inline float kfe(float force_mag){
 	
-	double toRet =  ae * exp(force_mag * delxe / kB / T);
+	float toRet =  ae * exp(force_mag * delxe / kB / T);
 	return toRet;
 }
 
-
-
+/*****Actual Class Functions ******/
 Network::Network() {
 
+	/**
 	DIM = 2;
 	cracked = false;
 	n_nodes = 1600;
@@ -205,16 +236,16 @@ Network::Network() {
 	n_lside = 0;
 	n_bside = 0;
 	n_tside = 0;
-	R = new double[n_nodes * DIM];
-	forces = new double[n_nodes * DIM];
+	R = new float[n_nodes * DIM];
+	forces = new float[n_nodes * DIM];
 	edges = new int[Z_MAX * n_nodes * 2];
 	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
 	lsideNodes = new int[max_nodes_on_a_side];
 	rsideNodes = new int[max_nodes_on_a_side];
 	tsideNodes = new int[max_nodes_on_a_side];
 	bsideNodes = new int[max_nodes_on_a_side];
-	damage = new double[2 * n_elems];
-	L = new double[2 * n_elems];
+	damage = new float[2 * n_elems];
+	L = new float[2 * n_elems];
 	PBC = new bool[2 * n_elems];
 	edge_matrix = new bool*[n_elems];
 	for (int i = 0; i < n_elems; i++) {
@@ -223,17 +254,31 @@ Network::Network() {
 			edge_matrix[i][j] = false;
 		}
 	}
+	**/
+	initialized = false;
 
 }
 
 Network::Network(Network const & source) {
 
+	initialized = false;
 	copy(source);
+	initialized = true;
+
+}
+
+Network::Network(string fname) {
+
+	initialized = false;
+	load_network(fname);
+	initialized = true;
+
 }
 
 Network::~Network() {
 
 	clear();
+
 }
 
 Network const & Network::operator=(Network const & other) {
@@ -276,27 +321,36 @@ void Network::clear() {
 	tsideNodes = NULL;
 	delete[] bsideNodes;
 	bsideNodes = NULL;
+
 }
 
 void Network::build_network() {
 
 	
 	//num_edges = Z_MAX * n_nodes * 2;
+	/** TO-DO **/
+	
+}
 
-	const string fname = "coordinates.txt";
+void Network::load_network(string fname) {
+
+	if (initialized) {
+		clear();
+	}
+	//const string fname = "coordinates.txt";
 	cout<<"Reading the mesh...\n";
-	take_input(R, edges, n_nodes, n_elems, DIM);
+	take_input(R, edges, n_nodes, n_elems);
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
 	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
 	//int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
 
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, n_lside, n_rside, n_tside, n_bside, n_nodes, DIM);	
+	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, n_lside, n_rside, n_tside, n_bside, n_nodes);	
 
 	__init__(L, damage, PBC, n_elems);
 
-	const double PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+	const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
 
 	this->make_edge_connections(15.0);
 	cout<<"Number after new connections made: "<<n_elems<<endl;
@@ -314,26 +368,21 @@ void Network::build_network() {
 		}
 
 	}
-	
-
-}
-
-void Network::load_network() {
 
 }
 
 void Network::copy(Network const & source) {
 
 	cracked = source.cracked;
-	DIM = source.DIM;
+	//DIM = source.DIM;
 	n_nodes = source.n_nodes;
 	n_elems = source.n_elems;
 	n_rside = source.n_rside;
 	n_lside = source.n_lside;
 	n_bside = source.n_bside;
 	n_tside = source.n_tside;
-	R = new double[n_nodes * DIM];
-	forces = new double[n_nodes * DIM];
+	R = new float[n_nodes * DIM];
+	forces = new float[n_nodes * DIM];
 	for (int i = 0; i < n_nodes * DIM; i++) {
 		R[i] = source.R[i];
 		forces[i] = source.forces[i];
@@ -356,8 +405,8 @@ void Network::copy(Network const & source) {
 
 	}
 
-	damage = new double[2 * n_elems];
-	L = new double[2 * n_elems];
+	damage = new float[2 * n_elems];
+	L = new float[2 * n_elems];
 	PBC = new bool[2 * n_elems];
 
 	for (int i = 0; i < 2 * n_elems; i++) {
@@ -374,16 +423,14 @@ void Network::copy(Network const & source) {
 		}
 	}
 
-
-
 }
 
-void Network::get_forces(const double* PBC_vector, bool update_damage = false) {
+void Network::get_forces(const float* PBC_vector, bool update_damage) {
 
 	int node1, node2;
 	int j, k, id; // loop variables
-	double r1[DIM]; double r2[DIM] ;
-	double edge_force[DIM];
+	float r1[DIM]; float r2[DIM] ;
+	float edge_force[DIM];
 
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -408,14 +455,14 @@ void Network::get_forces(const double* PBC_vector, bool update_damage = false) {
 				r2[k] += PBC_vector[k];
 			}
 			// get force on node1 due to node2
-			forcevector(edge_force, r1, r2, L[j], DIM);
+			forcevector(edge_force, r1, r2, L[j]);
 			// subtract back the PBC_vector to get original node position
 			for (k = 0; k < DIM; k++){
 				r2[k] -= PBC_vector[k];
 			}
 		}
 		else{
-			forcevector(edge_force, r1, r2, L[j], DIM);
+			forcevector(edge_force, r1, r2, L[j]);
 		}
 			for (k = 0; k < DIM; k++){
 				// if (edge_force[k] > 99.0) {
@@ -440,10 +487,10 @@ void Network::get_forces(const double* PBC_vector, bool update_damage = false) {
 
 }
 
-void Network::make_edge_connections(double dely_allowed = 10.0) {
+void Network::make_edge_connections(float dely_allowed) {
 
 	std::default_random_engine seed;
-	std::normal_distribution<double> generator(L_MEAN, L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	int nl, nr, lnode, rnode;
 	for(nl= 0; nl < n_lside; nl++){
 		lnode = lsideNodes[nl];
@@ -461,12 +508,11 @@ void Network::make_edge_connections(double dely_allowed = 10.0) {
 		}
 	}
 
-
 }
 
 void Network::apply_crack(Crack const & crack) {
 
-	double equation = 0;
+	float equation = 0;
 	vector<int> nodes_to_remove;
 	for(int i=0; i<n_nodes; i++){
 		equation = 0;
@@ -480,7 +526,7 @@ void Network::apply_crack(Crack const & crack) {
 		}
 	}
 	int edges_removed = 0, node1, node2;
-	for(int i = 0; i<n_edges; i++){
+	for(int i = 0; i<n_elems; i++){
 		node1 = edges[2*i];
 		node2 = edges[2*i+ 1];
 		if(contains(nodes_to_remove, node1) || contains(nodes_to_remove, node2)){
@@ -492,5 +538,14 @@ void Network::apply_crack(Crack const & crack) {
 	cout<<"Edges removed : "<<edges_removed<<endl;
 
 }
+
+int main() {
+
+
+	cout << "Compiled" << endl;
+}
+
+
+
 
 

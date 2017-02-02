@@ -4,13 +4,13 @@
 	
 // }
 
-Crack::Crack() : Crack(2) {}
+Crack::Crack() :Crack(2) {}
 
-Crack::Crack(int DIM) {
+Crack::Crack(int dim) {
 
-	this->DIM = DIM;
-	c = new double[DIM];
-	a = new double[DIM];
+	this->dim = dim;
+	c = new float[dim];
+	a = new float[dim];
 }
 
 Crack::~Crack() {
@@ -40,8 +40,8 @@ void Crack::clear() {
 
 void Crack::copy(Crack const & source) {
 
-	DIM = source.DIM;
-	for (int i = 0; i < DIM; i++) {
+	dim = source.dim;
+	for (int i = 0; i < dim; i++) {
 		this->a[i] = source.a[i];
 		this->c[i] = source.c[i];
 	}
