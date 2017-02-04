@@ -32,19 +32,12 @@ void side_nodes(float* R,\
 	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
 	// make the list of side nodes
 	for(int i=0; i<n; i++){
-		cout << i << endl;
-		cout << "n_nodes =" << n << endl;
-		cout << R[0] << endl;
 		if(fabs(R[i*DIM]-0.0)<TOL){lnodes[n_lside]=i; n_lside++;}
-		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM]-MAXBOUND)<TOL){rnodes[n_rside]=i; n_rside++;}
-		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bnodes[n_bside]=i; n_bside++;}
-		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-MAXBOUND)<TOL){tnodes[n_tside]=i; n_tside++;}
-		cout << __LINE__ << endl;
 	}
-	cout << __LINE__ << endl;
+	//cout << __LINE__ << endl;
 }
 
 inline int get_num_vertices(int elem_type){
@@ -94,33 +87,79 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 	delete[] local_nodes;
 }
 
-void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
+void mapping(int& edge_counter, int elem_type){
+	switch(elem_type){
+		case 2:
+			edge_counter += 3;
+		//TODO: add other mappings
+	}
+
+}
+
+void read_n(int& n_nodes, int& n_elems, string& fname){
+
+	string line;
+	ifstream source;
+	stringstream in_pos;
+	source.open(fname);
+	bool read_num_nodes = false, read_n_elems = false;
+	
+	n_nodes = 0;
+	n_elems = 0;
+	do{
+		getline(source, line);
+		if(line.find("$Nodes") != string::npos){
+			getline(source, line);
+			n_nodes = stoi(line);
+			read_num_nodes = true;
+		}
+	}while(!read_num_nodes);
+	do{
+		getline(source, line);
+		if(line.find("$Elements") != string::npos){
+			int id, elem_type;
+			int num_vertices, num_lines;
+			getline(source, line);
+			num_lines = stoi(line);
+			int c = 0;
+			for(int i=0; i<num_lines; i++){
+				getline(source, line);
+				//cout<<line<<endl;
+				in_pos<<line;
+				in_pos>>id;
+				in_pos>>elem_type;
+				//cout<<"element type is "<<elem_type<<endl;
+				num_vertices = get_num_vertices(elem_type);
+				if(num_vertices>0){
+					mapping(n_elems, elem_type);
+				}
+				in_pos.str(std::string());
+				in_pos.clear();
+			}
+			read_n_elems = true;
+			}
+			//TODO: get elements
+	}while(!read_n_elems);
+	source.close();
+}
+
+void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 	
 	string line;
 	ifstream source;
 	stringstream in_pos;
-	source.open("/Users/sahil1105/cpp11_code_with_cuda/template2d.msh");
-	//cout << __LINE__ << endl;
-	bool can_i_read_nodes= false,can_i_read_elems = false;
-	bool read_num_nodes = false, read_n_elems = false;
+	source.open(fname);
 
-	
+	bool read_num_nodes = false, read_n_elems = false;
 
 	do{
 		getline(source, line);
 		//cout<<line<<"\n";
 		//cout<<read_n_elems;
-		if(line=="$Nodes"){
+		if(line.find("$Nodes") != string::npos){
 			getline(source, line);
-			num_nodes=stoi(line);
-			//cout<<"Number of nodes in the function "<<num_nodes<<"\n";
 			float r[3]; int id;
-			//hack:
-			R = new float[num_nodes*DIM];
-			edges = new int[Z_MAX*num_nodes*2];
-
-			//
-			for(int i=0; i<num_nodes; i++){
+			for(int i=0; i<n_nodes; i++){
 				getline(source, line);
 				in_pos<<line;
 				//cout<<in_pos.str()<<endl;
@@ -145,7 +184,7 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	do{
 		getline(source, line);
 		//cout<<line<<"\n";
-		if(line=="$Elements"){
+		if(line.find("$Elements") != string::npos){
 			int id, elem_type;
 			int num_vertices, num_lines;
 			getline(source, line);
@@ -166,7 +205,12 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 				in_pos.clear();
 			}
 			read_n_elems = true;
-			n_elems = c;
+			if(c==n_elems){
+				cout<<"Everythong's alright here!\n";
+			}
+			else{
+				cout<<"Damn! Something's not right here...\n";
+			}
 			}
 			//TODO: get elements
 	}while(!read_n_elems);
@@ -188,6 +232,11 @@ inline void normalize_vector(float* result, const float* vec){
 	for (int i = 0; i<DIM; i++){
 		result[i] = vec[i] / norm;
 	}
+}
+
+inline bool does_file_exist(string& fname){
+	ifstream infile(fname);
+	return infile.good();
 }
 
 inline void normalize_vector(float* vec){
@@ -282,7 +331,7 @@ Network::Network(Network const & source) {
 
 }
 
-Network::Network(string fname) {
+Network::Network(string& fname) {
 
 	initialized = false;
 	load_network(fname);
@@ -346,45 +395,91 @@ void Network::build_network() {
 	/** TO-DO **/
 	
 }
+// TODO: Check what's wrong here
+// template <typename t>
+// void malloc_2d(t** array_2d, int r, int c){
+// 	array_2d = (t**)malloc(r*c*sizeof(t*));
+// 	for(int i=0; i< r; i++){
+// 		array_2d[i] = (t*)malloc(c*sizeof(t));
+// 	}
+// }
 
-void Network::load_network(string fname) {
+void Network::malloc_network(string& fname){
+	
+	read_n(n_nodes, n_elems, fname);
+
+
+	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
+	// add memory for side connections
+	n_elems += 3*max_nodes_on_a_side;
+
+	size_t sf = sizeof(float);
+	size_t si = sizeof(int);
+	size_t sb = sizeof(bool);
+
+	R = (float*)malloc(n_nodes*DIM*sf);
+	edges = (int*)malloc(n_elems*2*si);
+	forces = (float*)malloc(n_nodes*DIM*sf);
+	damage = (float*)malloc(n_elems*sf);
+	L = (float* )malloc(n_elems*sf);
+	PBC = (bool* )malloc(n_elems*sb);
+	lsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	rsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	bsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+
+	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
+	edge_matrix = (bool**)malloc(n_nodes*n_nodes*sizeof(bool*));
+	for(int i = 0; i<n_nodes; i++){
+		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
+	}
+
+	// 	initialise n_xside for side nodes
+	n_rside = 0;
+	n_lside = 0;
+	n_bside = 0;
+	n_tside = 0;
+
+	// adjust n_elems back to actual
+	n_elems -= 3*max_nodes_on_a_side;
+}
+
+void Network::load_network(string& fname) {
 
 	if (initialized) {
 		clear();
 	}
-	//const string fname = "coordinates.txt";
+	//Check if file exists
+	bool exists = does_file_exist(fname);
+	if(!exists){
+		cout<<"File does not exist!\n";
+		return;
+	}
+	
+	//Malloc all variables
+	malloc_network(fname);
+
+	cout<<"Malloc was successful!\n";
+
 	cout<<"Reading the mesh...\n";
-	take_input(R, edges, n_nodes, n_elems);
+	take_input(R, edges, n_nodes, n_elems, fname);
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
-	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
-	//int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
 
-	//hack:
-	lsideNodes = new int[max_nodes_on_a_side];
-	rsideNodes = new int[max_nodes_on_a_side];
-	tsideNodes = new int[max_nodes_on_a_side];
-	bsideNodes = new int[max_nodes_on_a_side];
-	n_lside = 0;
-	n_rside = 0;
-	n_tside = 0;
-	n_bside = 0;
-	//
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, n_lside, n_rside, n_tside, n_bside, n_nodes);	
+	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, \
+		n_lside, n_rside, n_tside, n_bside, n_nodes);	
 
+	cout<<"Side nodes written successfully! \n";
 	__init__(L, damage, PBC, n_elems);
-
-	const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
 
 	this->make_edge_connections(15.0);
 	cout<<"Number after new connections made: "<<n_elems<<endl;
 
 	
-
-	for (int i = 0; i < Z_MAX * n_nodes * 2; i += 2) {
-		int node1 = edges[i];
-		int node2 = edges[i+1];
+	for (int i = 0; i < n_elems; i++) {
+		int node1 = edges[2*i];
+		int node2 = edges[2*i + 1];
 		if(node1 == -1 || node2 == -1){
 			continue;
 		}
@@ -412,45 +507,60 @@ void Network::copy(Network const & source) {
 		R[i] = source.R[i];
 		forces[i] = source.forces[i];
 	}
-	edges = new int[Z_MAX * n_nodes * 2];
-	for (int i = 0; i < Z_MAX * n_nodes * 2; i++) {
+	
+	edges = new int[n_elems*2];
+	for (int i = 0; i < n_elems * 2; i++) {
 		edges[i] = source.edges[i];
 	}
-	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
-	lsideNodes = new int[max_nodes_on_a_side];
-	rsideNodes = new int[max_nodes_on_a_side];
-	tsideNodes = new int[max_nodes_on_a_side];
-	bsideNodes = new int[max_nodes_on_a_side];
+	
+	lsideNodes = new int[n_lside];
+	rsideNodes = new int[n_rside];
+	tsideNodes = new int[n_tside];
+	bsideNodes = new int[n_bside];
 
-	for (int i = 0; i < max_nodes_on_a_side; i++) {
+	for (int i = 0; i < n_lside; i++) {
 		lsideNodes[i] = source.lsideNodes[i];
+	}
+	for (int i = 0; i < n_rside; i++) {
 		rsideNodes[i] = source.rsideNodes[i];
+	}
+	for (int i = 0; i < n_tside; i++) {
 		tsideNodes[i] = source.tsideNodes[i];
+	}
+	for (int i = 0; i < n_bside; i++) {
 		bsideNodes[i] = source.bsideNodes[i];
-
 	}
 
-	damage = new float[2 * n_elems];
-	L = new float[2 * n_elems];
-	PBC = new bool[2 * n_elems];
+	damage = new float[n_elems];
+	L = new float[n_elems];
+	PBC = new bool[n_elems];
 
-	for (int i = 0; i < 2 * n_elems; i++) {
+	for (int i = 0; i < n_elems; i++) {
 		damage[i] = source.damage[i];
 		L[i] = source.L[i];
 		PBC[i] = source.PBC[i];
 	}
 
-	edge_matrix = new bool*[n_elems];
+	edge_matrix = new bool*[n_nodes];
+	for(int i=0; i<n_nodes; i++){
+		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
+	}
+
 	for (int i = 0; i < n_elems; i++) {
-		edge_matrix[i] = new bool[i+1];
-		for (int j = 0; j <= i; i++) {
-			edge_matrix[i][j] = source.edge_matrix[i][j];
+		int node1 = edges[2*i];
+		int node2 = edges[2*i + 1];
+		if(node1 == -1 || node2 == -1){
+			continue;
 		}
+		else if (node1 < node2) {
+			edge_matrix[node1][node2] = true;
+		}
+
 	}
 
 }
 
-void Network::get_forces(const float* PBC_vector, bool update_damage) {
+void Network::get_forces(bool update_damage = false) {
 
 	int node1, node2;
 	int j, k, id; // loop variables
@@ -524,7 +634,7 @@ void Network::make_edge_connections(float dely_allowed) {
 			if (fabs(R[lnode*DIM + 1] - R[rnode*DIM + 1]) < dely_allowed){
 				edges[n_elems*2] = rnode;
 				edges[n_elems*2 + 1] = lnode;
-				cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
+				//cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
 				L[n_elems] = generator(seed);
 				damage[n_elems] = 0.0;
 				PBC[n_elems] = true;
@@ -564,29 +674,33 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
-void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+// void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
 
-	int R_total = n_nodes * DIM;
-	int R_split_size = ceil(R_total/number_of_procs);
+// 	int R_total = n_nodes * DIM;
+// 	int R_split_size = ceil(R_total/number_of_procs);
 
-	if (curr_proc_rank < number_of_procs-1) {
+// 	if (curr_proc_rank < number_of_procs-1) {
 
-		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
-			R_split[j] = R[i];
-		}
+// 		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
+// 			R_split[j] = R[i];
+// 		}
 
-	}
-	else if (curr_proc_rank == number_of_procs-1) {
+// 	}
+// 	else if (curr_proc_rank == number_of_procs-1) {
 
-		for (int i = 0; )
-	}
+// 		for (int i = 0; )
+// 	}
 
 
-}
+// }
 
 int main() {
 
-	Network test_network("template2d.msh");
+	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
+	string path = "./template2d.msh";
+	Network test_network(path);
+	Network net2 = test_network;
+	net2.get_forces();
 	cout << "Compiled" << endl;
 }
 

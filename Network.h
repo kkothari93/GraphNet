@@ -16,6 +16,7 @@
 #include <string>
 #include "crack.h"
 #include <stddef.h>
+using namespace std;
 
 #define __params__	
 #define DIM 2								// Number of dimensions
@@ -40,20 +41,23 @@
 
 using namespace std;
 
+const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+
 class Network {
 
 public:
 
 	Network();
 	Network(Network const & source);
-	Network(string fname);
+	Network(string& fname);
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	void build_network();
 	void apply_crack(Crack const & crack);
-	void load_network(string fname);
+	void load_network(string&);
+	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(const float* PBC_vector, bool update_damage = false);
+	void get_forces(bool);
 
 
 	
