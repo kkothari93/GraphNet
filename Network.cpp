@@ -32,11 +32,19 @@ void side_nodes(float* R,\
 	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
 	// make the list of side nodes
 	for(int i=0; i<n; i++){
+		cout << i << endl;
+		cout << "n_nodes =" << n << endl;
+		cout << R[0] << endl;
 		if(fabs(R[i*DIM]-0.0)<TOL){lnodes[n_lside]=i; n_lside++;}
+		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM]-MAXBOUND)<TOL){rnodes[n_rside]=i; n_rside++;}
+		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bnodes[n_bside]=i; n_bside++;}
+		cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-MAXBOUND)<TOL){tnodes[n_tside]=i; n_tside++;}
+		cout << __LINE__ << endl;
 	}
+	cout << __LINE__ << endl;
 }
 
 inline int get_num_vertices(int elem_type){
@@ -96,6 +104,8 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	bool can_i_read_nodes= false,can_i_read_elems = false;
 	bool read_num_nodes = false, read_n_elems = false;
 
+	
+
 	do{
 		getline(source, line);
 		//cout<<line<<"\n";
@@ -105,6 +115,11 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 			num_nodes=stoi(line);
 			//cout<<"Number of nodes in the function "<<num_nodes<<"\n";
 			float r[3]; int id;
+			//hack:
+			R = new float[num_nodes*DIM];
+			edges = new int[Z_MAX*num_nodes*2];
+
+			//
 			for(int i=0; i<num_nodes; i++){
 				getline(source, line);
 				in_pos<<line;
@@ -346,6 +361,16 @@ void Network::load_network(string fname) {
 	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
 	//int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
 
+	//hack:
+	lsideNodes = new int[max_nodes_on_a_side];
+	rsideNodes = new int[max_nodes_on_a_side];
+	tsideNodes = new int[max_nodes_on_a_side];
+	bsideNodes = new int[max_nodes_on_a_side];
+	n_lside = 0;
+	n_rside = 0;
+	n_tside = 0;
+	n_bside = 0;
+	//
 	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, n_lside, n_rside, n_tside, n_bside, n_nodes);	
 
 	__init__(L, damage, PBC, n_elems);
@@ -536,6 +561,26 @@ void Network::apply_crack(Crack const & crack) {
 		}
 	}
 	cout<<"Edges removed : "<<edges_removed<<endl;
+
+}
+
+void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+
+	int R_total = n_nodes * DIM;
+	int R_split_size = ceil(R_total/number_of_procs);
+
+	if (curr_proc_rank < number_of_procs-1) {
+
+		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
+			R_split[j] = R[i];
+		}
+
+	}
+	else if (curr_proc_rank == number_of_procs-1) {
+
+		for (int i = 0; )
+	}
+
 
 }
 
