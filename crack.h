@@ -17,7 +17,8 @@ public:
 	float * a;
 	int dim;
 	Crack(); //: Crack(2) {}
-	Crack(int dim);
+	Crack(float, float, float, float);
+	Crack(float, float,float, float,float, float);
 	~Crack();
 	Crack(Crack const & source);
 	Crack const & operator=(Crack const & other);

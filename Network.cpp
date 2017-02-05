@@ -358,35 +358,56 @@ Network const & Network::operator=(Network const & other) {
 
 void Network::clear() {
 
-	delete[] R;
-	R = NULL;
-	delete[] edges;
-	edges = NULL;
-	delete[] forces;
-	forces = NULL;
-	delete[] damage;
-	damage = NULL;
+	free(R);
+	free(edges);
+	free(forces);
+	free(damage);
 
-	for (int i = 0; i < DIM; i++) {
-		delete[] edge_matrix[i];
-		edge_matrix[i] = NULL;
-	}
-	delete[] edge_matrix;
-	edge_matrix = NULL;
-	delete[] L;
-	L = NULL;
-	delete[] PBC;
-	PBC = NULL;
-	delete[] lsideNodes;
-	lsideNodes = NULL;
-	delete[] rsideNodes;
-	rsideNodes = NULL;
-	delete[] tsideNodes;
-	tsideNodes = NULL;
-	delete[] bsideNodes;
-	bsideNodes = NULL;
+	// for (int i = 0; i < n_nodes; i++) {
+	// 	free(edge_matrix[i]);
+	// }
+	free(edge_matrix);
+	free(L);
+	free(PBC);
+	free(lsideNodes);
+	free(rsideNodes);
+	free(tsideNodes);
+	free(bsideNodes);
 
 }
+
+
+// void Network::clear() {
+
+// 	delete[] R;
+// 	R = NULL;
+// 	delete[] edges;
+// 	edges = NULL;
+// 	delete[] forces;
+// 	forces = NULL;
+// 	delete[] damage;
+// 	damage = NULL;
+
+// 	for (int i = 0; i < n_nodes; i++) {
+// 		delete[] edge_matrix[i];
+// 		edge_matrix[i] = NULL;
+// 	}
+// 	delete[] edge_matrix;
+// 	edge_matrix = NULL;
+// 	delete[] L;
+// 	L = NULL;
+// 	delete[] PBC;
+// 	PBC = NULL;
+// 	delete[] lsideNodes;
+// 	lsideNodes = NULL;
+// 	delete[] rsideNodes;
+// 	rsideNodes = NULL;
+// 	delete[] tsideNodes;
+// 	tsideNodes = NULL;
+// 	delete[] bsideNodes;
+// 	bsideNodes = NULL;
+
+// }
 
 void Network::build_network() {
 
@@ -395,6 +416,7 @@ void Network::build_network() {
 	/** TO-DO **/
 	
 }
+
 // TODO: Check what's wrong here
 // template <typename t>
 // void malloc_2d(t** array_2d, int r, int c){
@@ -699,8 +721,8 @@ int main() {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
 	Network test_network(path);
-	Network net2 = test_network;
-	net2.get_forces();
+	Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
+	test_network.apply_crack(defect);
 	cout << "Compiled" << endl;
 }
 
