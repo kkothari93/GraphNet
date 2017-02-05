@@ -32,19 +32,19 @@ void side_nodes(float* R,\
 	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
 	// make the list of side nodes
 	for(int i=0; i<n; i++){
-		cout << i << endl;
-		cout << "n_nodes =" << n << endl;
-		cout << R[0] << endl;
+		//cout << i << endl;
+		//cout << "n_nodes =" << n << endl;
+		//cout << R[0] << endl;
 		if(fabs(R[i*DIM]-0.0)<TOL){lnodes[n_lside]=i; n_lside++;}
-		cout << __LINE__ << endl;
+		//cout << __LINE__ << endl;
 		if(fabs(R[i*DIM]-MAXBOUND)<TOL){rnodes[n_rside]=i; n_rside++;}
-		cout << __LINE__ << endl;
+		//cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bnodes[n_bside]=i; n_bside++;}
-		cout << __LINE__ << endl;
+	//	cout << __LINE__ << endl;
 		if(fabs(R[i*DIM + 1]-MAXBOUND)<TOL){tnodes[n_tside]=i; n_tside++;}
-		cout << __LINE__ << endl;
+		//cout << __LINE__ << endl;
 	}
-	cout << __LINE__ << endl;
+	//cout << __LINE__ << endl;
 }
 
 inline int get_num_vertices(int elem_type){
@@ -94,6 +94,8 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 	delete[] local_nodes;
 }
 
+void read_num_nodes()
+
 void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	
 	string line;
@@ -104,7 +106,8 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 	bool can_i_read_nodes= false,can_i_read_elems = false;
 	bool read_num_nodes = false, read_n_elems = false;
 
-	
+	// R = new float[3200];
+	// edges = new int[11000];
 
 	do{
 		getline(source, line);
@@ -116,8 +119,8 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 			//cout<<"Number of nodes in the function "<<num_nodes<<"\n";
 			float r[3]; int id;
 			//hack:
-			R = new float[num_nodes*DIM];
-			edges = new int[Z_MAX*num_nodes*2];
+			// R = new float[num_nodes*DIM];
+			// edges = new int[Z_MAX*num_nodes*2];
 
 			//
 			for(int i=0; i<num_nodes; i++){
@@ -135,12 +138,12 @@ void take_input(float* R, int* edges, int& num_nodes, int& n_elems) {
 		}
 
 	}while(!read_num_nodes);
-	// for(int i=0; i<num_nodes; i++){
-	// 	cout<<endl;
-	// 	for(int d =0; d<DIM; d++){
-	// 		cout<<R[i*DIM + d]<<"\t";
-	// 	}
-	// }
+	for(int i=0; i<num_nodes; i++){
+		cout<<endl;
+		for(int d =0; d<DIM; d++){
+			cout<<R[i*DIM + d]<<"\t";
+		}
+	}
 
 	do{
 		getline(source, line);
@@ -354,13 +357,17 @@ void Network::load_network(string fname) {
 	}
 	//const string fname = "coordinates.txt";
 	cout<<"Reading the mesh...\n";
+	R = new float[3200];
+	edges = new int[11000];
 	take_input(R, edges, n_nodes, n_elems);
+	cout << R[0] << " R[0]" << endl;
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
 	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
 	//int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
-
+	cout << "Max Nodes on a side: " << max_nodes_on_a_side << endl;
+	cout << "n_nodes: " << n_nodes << endl;
 	//hack:
 	lsideNodes = new int[max_nodes_on_a_side];
 	rsideNodes = new int[max_nodes_on_a_side];
@@ -564,25 +571,25 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
-void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+// void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
 
-	int R_total = n_nodes * DIM;
-	int R_split_size = ceil(R_total/number_of_procs);
+// 	int R_total = n_nodes * DIM;
+// 	int R_split_size = ceil(R_total/number_of_procs);
 
-	if (curr_proc_rank < number_of_procs-1) {
+// 	if (curr_proc_rank < number_of_procs-1) {
 
-		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
-			R_split[j] = R[i];
-		}
+// 		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
+// 			R_split[j] = R[i];
+// 		}
 
-	}
-	else if (curr_proc_rank == number_of_procs-1) {
+// 	}
+// 	else if (curr_proc_rank == number_of_procs-1) {
 
-		for (int i = 0; )
-	}
+// 		for (int i = 0; )
+// 	}
 
 
-}
+// }
 
 int main() {
 
