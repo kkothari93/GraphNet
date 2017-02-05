@@ -14,6 +14,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include "crack.h"
 #include <stddef.h>
 using namespace std;
@@ -58,9 +59,8 @@ public:
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
 	void get_forces(bool);
-
-
-	
+	void move_top_plate(float*);
+	void optimize(float, float, int);
 
 private:
 
@@ -85,6 +85,9 @@ private:
 	int* tsideNodes;
 	int* bsideNodes;
 	bool initialized;
+	//add moving nodes to speed up force
+	int* moving_nodes;
+	int n_moving;
 
 	
 };

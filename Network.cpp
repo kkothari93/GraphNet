@@ -206,7 +206,7 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 			}
 			read_n_elems = true;
 			if(c==n_elems){
-				cout<<"Everythong's alright here!\n";
+				cout<<"Everything's alright here!\n";
 			}
 			else{
 				cout<<"Damn! Something's not right here...\n";
@@ -286,6 +286,12 @@ inline float kfe(float force_mag){
 	
 	float toRet =  ae * exp(force_mag * delxe / kB / T);
 	return toRet;
+}
+
+inline bool ismember(int item, int* array,size_t size){
+	bool is_inside = false; 
+	for(int k=0; k<size; k++){if(array[k]==item){is_inside = true; break;}}
+	return is_inside;
 }
 
 /*****Actual Class Functions ******/
@@ -373,6 +379,7 @@ void Network::clear() {
 	free(rsideNodes);
 	free(tsideNodes);
 	free(bsideNodes);
+	free(moving_nodes);
 
 }
 
@@ -490,7 +497,22 @@ void Network::load_network(string& fname) {
 	cout<<"Number of elements are: "<<n_elems<<endl;
 
 	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, \
-		n_lside, n_rside, n_tside, n_bside, n_nodes);	
+		n_lside, n_rside, n_tside, n_bside, n_nodes);
+
+
+	// moving nodes
+	n_moving = n_nodes - n_tside - n_bside;
+	moving_nodes = (int*)malloc(sizeof(int)*n_moving);
+	
+	int c = 0;
+	for(int i =0; i<n_nodes; i++){
+		if(!ismember(i, tsideNodes, n_tside) && !ismember(i, bsideNodes, n_bside)){
+			moving_nodes[c] = i;
+			c++;
+		}
+	}
+	cout<<"We have "<<c<<" moving nodes\n";
+
 
 	cout<<"Side nodes written successfully! \n";
 	__init__(L, damage, PBC, n_elems);
@@ -523,6 +545,7 @@ void Network::copy(Network const & source) {
 	n_lside = source.n_lside;
 	n_bside = source.n_bside;
 	n_tside = source.n_tside;
+	n_moving = source.n_moving;
 
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
@@ -538,6 +561,7 @@ void Network::copy(Network const & source) {
 	rsideNodes = (int* )malloc(n_rside*si);
 	bsideNodes = (int* )malloc(n_bside*si);
 	tsideNodes = (int* )malloc(n_tside*si);
+	moving_nodes = (int *)malloc(n_moving*si);
 
 	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
 	edge_matrix = (bool**)malloc(n_nodes*sizeof(bool*));
@@ -566,6 +590,9 @@ void Network::copy(Network const & source) {
 	for (int i = 0; i < n_bside; i++) {
 		bsideNodes[i] = source.bsideNodes[i];
 	}
+	for (int i = 0; i < n_moving; i++) {
+		moving_nodes[i] = source.moving_nodes[i];
+	}
 
 	for (int i = 0; i < n_elems; i++) {
 		damage[i] = source.damage[i];
@@ -593,6 +620,8 @@ void Network::get_forces(bool update_damage = false) {
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
 	float edge_force[DIM];
+
+	memset(forces, 0.0, n_nodes*DIM*sizeof(*forces));
 
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -627,12 +656,6 @@ void Network::get_forces(bool update_damage = false) {
 			forcevector(edge_force, r1, r2, L[j]);
 		}
 			for (k = 0; k < DIM; k++){
-				// if (edge_force[k] > 99.0) {
-				// 	cout<<"Node "<<node1<<" and node "<<node2<<endl;
-				// 	cout<<"Distance is "<<dist(r1, r2)<<endl;
-				// 	cout<<"L is "<<chain_len[j]<<endl;
-				// 	cout<<endl;
-				// }
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
@@ -701,6 +724,50 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
+void Network::move_top_plate(float* v){
+	int node;
+	for(int i = 0; i<n_tside; i++){
+		node = tsideNodes[i];
+		for(int d=0; d<DIM; d++){
+			R[node*DIM + d] += TIME_STEP*v[d]; 
+		}
+	}
+}
+
+float getabsmax(float* arr, size_t sizeofarr){
+	float max_elem = 0.0;
+	for(int i = 0; i<sizeofarr; i++){
+		if(fabs(arr[i])>max_elem){max_elem = fabs(arr[i]);}
+	}
+	return max_elem;
+}
+
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
+	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
+	float* delR = new float[n_moving*DIM]();
+	float g;
+	int id, d, node;
+	for(int step = 0; step < max_iter; step++){
+		get_forces(false);
+		if(getabsmax(forces,n_nodes*DIM)>TOL){
+			for(id = 0; id < n_moving; id++){
+				node = moving_nodes[id];
+				for(d = 0; d<DIM; d++){
+					g = forces[DIM*node+d];
+					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
+					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
+					R[node*DIM + d] += delR[id*DIM + d];
+				}		
+			}
+		}
+		else{
+			break;
+		}
+	}
+	delete[] rms_history;
+	delete[] delR;
+}
+
 // void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
 
 // 	int R_total = n_nodes * DIM;
@@ -724,11 +791,13 @@ void Network::apply_crack(Crack const & crack) {
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
+	float v[2] = {10.0, 0.0};
 	string path = "./template2d.msh";
 	Network test_network(path);
-	Network test2 = test_network;
-	Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
-	test2.apply_crack(defect);
+	test_network.move_top_plate(v);
+	test_network.optimize();
+	// Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
+	// test2.apply_crack(defect);
 	cout << "Compiled" << endl;
 }
 
