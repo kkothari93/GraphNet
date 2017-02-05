@@ -523,23 +523,37 @@ void Network::copy(Network const & source) {
 	n_lside = source.n_lside;
 	n_bside = source.n_bside;
 	n_tside = source.n_tside;
-	R = new float[n_nodes * DIM];
-	forces = new float[n_nodes * DIM];
+
+	size_t sf = sizeof(float);
+	size_t si = sizeof(int);
+	size_t sb = sizeof(bool);
+
+	R = (float*)malloc(n_nodes*DIM*sf);
+	edges = (int*)malloc(n_elems*2*si);
+	forces = (float*)malloc(n_nodes*DIM*sf);
+	damage = (float*)malloc(n_elems*sf);
+	L = (float* )malloc(n_elems*sf);
+	PBC = (bool* )malloc(n_elems*sb);
+	lsideNodes = (int* )malloc(n_lside*si);
+	rsideNodes = (int* )malloc(n_rside*si);
+	bsideNodes = (int* )malloc(n_bside*si);
+	tsideNodes = (int* )malloc(n_tside*si);
+
+	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
+	edge_matrix = (bool**)malloc(n_nodes*sizeof(bool*));
+	for(int i = 0; i<n_nodes; i++){
+		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
+	}
+
 	for (int i = 0; i < n_nodes * DIM; i++) {
 		R[i] = source.R[i];
 		forces[i] = source.forces[i];
 	}
 	
-	edges = new int[n_elems*2];
 	for (int i = 0; i < n_elems * 2; i++) {
 		edges[i] = source.edges[i];
 	}
 	
-	lsideNodes = new int[n_lside];
-	rsideNodes = new int[n_rside];
-	tsideNodes = new int[n_tside];
-	bsideNodes = new int[n_bside];
-
 	for (int i = 0; i < n_lside; i++) {
 		lsideNodes[i] = source.lsideNodes[i];
 	}
@@ -553,19 +567,10 @@ void Network::copy(Network const & source) {
 		bsideNodes[i] = source.bsideNodes[i];
 	}
 
-	damage = new float[n_elems];
-	L = new float[n_elems];
-	PBC = new bool[n_elems];
-
 	for (int i = 0; i < n_elems; i++) {
 		damage[i] = source.damage[i];
 		L[i] = source.L[i];
 		PBC[i] = source.PBC[i];
-	}
-
-	edge_matrix = new bool*[n_nodes];
-	for(int i=0; i<n_nodes; i++){
-		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
 	}
 
 	for (int i = 0; i < n_elems; i++) {
@@ -721,8 +726,9 @@ int main() {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
 	Network test_network(path);
+	Network test2 = test_network;
 	Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
-	test_network.apply_crack(defect);
+	test2.apply_crack(defect);
 	cout << "Compiled" << endl;
 }
 
