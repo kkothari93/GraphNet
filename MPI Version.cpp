@@ -15,6 +15,7 @@
 
 #include "gnuplot_i.hpp"
 #include "input.h"
+#include "Network.h"
 
 
 #define DIM 2								// Number of dimensions
@@ -40,67 +41,7 @@ static double vel[DIM] = {0.0, 100.0};
 
 int main() {
 
-	int n_nodes=1600, n_elems = 11000;
-	double * R =  new double[n_nodes*DIM];
-	int * edges = new int[Z_MAX*n_nodes*2];
-	double * pull_forces = new double[STEPS*DIM];
-
-	vector<double> p_x;
-	vector<double> p_y;
-
-	// file to read and write position data
-	const string fname = "coordinates.txt";
-
-	// Read in mesh
-	cout<<"Reading the mesh...\n";	
-	take_input(R, edges, n_nodes, n_elems);
-	cout<<"Mesh read successfully!\n";
-	cout<<"Number of nodes are: "<<n_nodes<<endl;
-	cout<<"Number of elements are: "<<n_elems<<endl;
-
-	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
-	int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
-	// get left and right nodes
-	int * lsideNodes = new int[max_nodes_on_a_side];
-	int * rsideNodes = new int[max_nodes_on_a_side];
-	// get top and bottom nodes
-	int * tsideNodes = new int[max_nodes_on_a_side];
-	int * bsideNodes = new int[max_nodes_on_a_side];
-
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes,\
-		n_lside, n_rside, n_tside, n_bside, n_nodes);	
-
-	// Initialize edge properties
-	double * damage = new doubel[2*n_elems];
-	double * L = new doubel[2*n_elems];
-	bool * PBC = new bool[2*n_elems];
-	__init__(L, damage, PBC, n_elems);
-
-	// Make PBC connections
-	const double PBC_vector[DIM] = {MAXBOUND*1.2, 0};
-	// TODO: get lside and rside nodes
-	make_edge_connections(R, edges, n_elems, \
-		lsideNodes, rsideNodes, n_lside, n_rside, \
-		PBC, L, damage, 15.0);
-	cout<<"Number after new connections made: "<<n_elems<<endl;
-
-	if(CRACKED){
-		double c[] = {MAXBOUND/2.0, MAXBOUND/2.0};
-		double a[] = {MAXBOUND/20.0, MAXBOUND/25.0};
-		crack(c, a, R, n_nodes, edges, n_elems);
-	}
 	
-	// gnuplots
-	//Gnuplot gforces("lines lw 2");
-	//Gnuplot gnetwork;
-
-	//plot_network(gnetwork, R, edges, PBC, \
-	//			n_nodes, n_elems, 0);
-	// Track time for 1000 iterations
-	clock_t t = clock(); 
-	
-	int iter = 0; // needed to write forces later
-
 	MPI_Init(NULL, NULL);
 
   	// Get the number of processes
@@ -112,22 +53,65 @@ int main() {
   	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
   	// Get the name of the processor
-  	char processor_name[MPI_MAX_PROCESSOR_NAME];
-  	int name_len;
-  	MPI_Get_processor_name(processor_name, &name_len);
+  	// char processor_name[MPI_MAX_PROCESSOR_NAME];
+  	// int name_len;
+  	// MPI_Get_processor_name(processor_name, &name_len);
 
-  	int number_of_edges_per_process = Z_MAX*n_nodes*2/world_size;
-  	int * edges_this_process = new int[number_of_edges_per_process];
-
-  	int k = 0;
-  	for (int i = number_of_edges_per_process * world_rank; i < min(number_of_edges_per_process * (world_rank+1), Z_MAX*n_nodes*2); i++) {
-
-  		edges_this_process[k] = edges[i];
-  		k++;
-
-  	}
+  	Network * main_network = NULL;
+  	String fname = "";
+	main_network = new Network(fname);
 
 
+  	// int number_of_edges_per_process = Z_MAX*n_nodes*2/world_size;
+  	// int * edges_this_process = new int[number_of_edges_per_process];
+
+  	// int k = 0;
+  	// for (int i = number_of_edges_per_process * world_rank; i < min(number_of_edges_per_process * (world_rank+1), Z_MAX*n_nodes*2); i++) {
+
+  	// 	edges_this_process[k] = edges[i];
+  	// 	k++;
+
+  	// }
+
+	float * local_R;
+	int * local_edges;
+
+	main_network->split_for_MPI(local_R, local_edges, NULL, world_size, world_rank);
+
+	int iter = 0; // needed to write forces later
+
+	for(iter = 0; iter<STEPS; iter++){
+		if((iter+1)%1000 == 0){ // +1 required to have values in p_x, p_y
+			cout<<(iter+1)<<endl; 
+			cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+			t = clock();  // reset clock
+
+			// plot network
+			//plot_network(gnetwork, R, edges, PBC, \
+			 	//n_nodes, n_elems, iter);
+			
+			// Plot forces
+			//plot_forces(gforces, p_x, p_y, iter);
+
+
+		}
+		optimize(local_R, local_edges, damage, L, n_nodes, n_elems,\
+			PBC, PBC_vector, tsideNodes, n_tside, bsideNodes, n_bside,\
+			pull_forces, iter);
+	
+		get_components(p_x, p_y, pull_forces, iter);
+
+		if (world_rank == 0) {
+			move_top_nodes(R, tsideNodes, n_tside);
+		}
+		
+		//sync step:
+		//receive one above your topmost from prev_proc
+		//send your topmost to the prev proc
+		//send your bottommost to next proc
+		//receive one below your bottommost from next proc
+
+	}
 
 
 

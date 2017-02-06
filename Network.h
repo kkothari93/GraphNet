@@ -64,6 +64,7 @@ public:
 	void move_top_plate();
 	void get_plate_forces(float*, int);
 	void optimize(float, float, int);
+	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
 
 private:
 
@@ -76,14 +77,14 @@ private:
 	int n_elems;
 	int n_rside, n_lside, n_bside, n_tside;
 	//int num_edges;
-	float * R;
-	int * edges;
-	float * forces;
-	float * damage;
-	bool ** edge_matrix;
-	float * L;
-	bool* PBC;
-	int* lsideNodes;
+	float * R; //n_nodes*DIM
+	int * edges; //n_elems*2
+	float * forces; //n_nodes*DIM
+	float * damage;// n_nodes
+	bool ** edge_matrix; 
+	float * L; //n_elems
+	bool* PBC; //n_elems
+	int* lsideNodes; //max_nodes_on_a_side*2
 	int* rsideNodes;
 	int* tsideNodes;
 	int* bsideNodes;

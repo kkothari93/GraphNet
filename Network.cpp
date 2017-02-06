@@ -783,6 +783,7 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 	delete[] delR;
 }
 
+<<<<<<< HEAD
 void Network::get_plate_forces(float* plate_forces, int iter){
 	int node;
 	for(int i=0; i<n_tside; i++){
@@ -796,23 +797,32 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 }
 
 // void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+=======
+void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+>>>>>>> 1272b498a79e1bc120b056c179a87248477f3c51
 
-// 	int R_total = n_nodes * DIM;
-// 	int R_split_size = ceil(R_total/number_of_procs);
+	int R_total = n_nodes * DIM;
+	int R_split_size = ceil(R_total/number_of_procs);
+	int R_buffer = 0; //need to change
+	R_split = new float[R_split_size];
 
-// 	if (curr_proc_rank < number_of_procs-1) {
+	if (curr_proc_rank == 0) {
 
-// 		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
-// 			R_split[j] = R[i];
-// 		}
+		for (int i = 0; i < R_split_size + R_buffer; i++) {
+			R_split[i] = R[i];
+		}
 
-// 	}
-// 	else if (curr_proc_rank == number_of_procs-1) {
+	}
+	else if (curr_proc_rank < number_of_procs-1) {
 
-// 		for (int i = 0; )
-// 	}
+		for (int i = curr_proc_rank*R_split_size - R_buffer, int j = 0; i < (curr_proc_rank+1)*(R_split_size) + R_buffer; i++, j++) {
+			R_split[j] = R[i];
+		}
 
+	}
+	else if (curr_proc_rank == number_of_procs-1) {
 
+<<<<<<< HEAD
 // }
 template <typename t>
 void write_to_file(string& fname, t* arr, int rows, int cols){
@@ -844,6 +854,38 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 		}
 		logger<<"\n";
 	}
+=======
+		for (int i = curr_proc_rank * number_of_procs - R_buffer, int j = 0; i < R_total; i++, j++) {
+			R_split[i] = R[j];
+		}
+	}
+
+	int edges_total = n_elems*2;
+	int edges_split_size = ceil(edges_total/number_of_procs);
+	edges_split = new float[edges_split_size];
+
+	if (curr_proc_rank == 0) {
+
+
+
+	}
+	else if (curr_proc_rank < number_of_procs-1) {
+
+		for (int i = curr_proc_rank*edges_split_size, int j = 0; i < (curr_proc_rank+1)*(edges_split_size); i++, j++) {
+			edges_split[j] = R[i];
+		}
+
+	}
+	else if (curr_proc_rank == number_of_procs-1) {
+
+		for (int i = curr_proc_rank * number_of_procs, int j = 0; i < edge_total; i++, j++) {
+			edges_split[i] = R[j];
+		}
+	}
+
+
+
+>>>>>>> 1272b498a79e1bc120b056c179a87248477f3c51
 }
 
 int main() {
