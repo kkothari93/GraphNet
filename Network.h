@@ -14,8 +14,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include "crack.h"
 #include <stddef.h>
+using namespace std;
 
 #define __params__	
 #define DIM 2								// Number of dimensions
@@ -40,23 +42,26 @@
 
 using namespace std;
 
+const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+
 class Network {
 
 public:
 
 	Network();
 	Network(Network const & source);
-	Network(string fname);
+	Network(string& fname);
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	void build_network();
 	void apply_crack(Crack const & crack);
-	void load_network(string fname);
+	void load_network(string&);
+	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(const float* PBC_vector, bool update_damage = false);
-
-
-	
+	void get_forces(bool);
+	void move_top_plate(float*);
+	void optimize(float, float, int);
+	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
 
 private:
 
@@ -81,6 +86,9 @@ private:
 	int* tsideNodes;
 	int* bsideNodes;
 	bool initialized;
+	//add moving nodes to speed up force
+	int* moving_nodes;
+	int n_moving;
 
 	
 };
