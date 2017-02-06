@@ -57,9 +57,11 @@ inline bool contains(vector<int>& vec, int elem){
 }
 
 inline float getnorm(const float* vec, const int dim = DIM){
-	float s = 0;
+	float s = 0,t;
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
-		s += pow(vec[j], 2);
+		t = vec[j];
+		s += t*t;
 	}
 	return sqrt(s);
 }
@@ -220,6 +222,7 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
 	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	#pragma unroll
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
 		damage[i] = 0.0;
@@ -229,6 +232,7 @@ void __init__(float* L, float* damage, bool* PBC, int n_elems){
 
 inline void normalize_vector(float* result, const float* vec){
 	float norm = getnorm(vec);
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		result[i] = vec[i] / norm;
 	}
@@ -241,12 +245,14 @@ inline bool does_file_exist(string& fname){
 
 inline void normalize_vector(float* vec){
 	float norm = getnorm(vec);
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		vec[i] = vec[i] / norm;
 	}
 }
 
 inline void unitvector(float* result, float* r1, float* r2){
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
 		result[j] = r1[j] - r2[j];
 	}
@@ -260,15 +266,18 @@ inline float force_wlc(float x, float L){
 }
 
 inline void convert_to_vector(float* result, const float mag, const float* direction){
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		result[i] = mag*direction[i];
 	}
 }
 
 inline float dist(const float* r1, const float* r2){
-	float s = 0.0;
+	float s = 0.0, t;
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
-		s += pow(r1[j] - r2[j], 2.0);
+		t = r1[j] - r2[j];
+		s += t * t;
 	}
 	return sqrt(s);
 }
@@ -634,6 +643,7 @@ void Network::get_forces(bool update_damage = false) {
 		}
 
 		// read the positions
+		#pragma unroll
 		for(k = 0; k<DIM; k++){
 			r1[k] = R[node1*DIM + k]; 
 			r2[k] = R[node2*DIM + k];
@@ -642,12 +652,14 @@ void Network::get_forces(bool update_damage = false) {
 		// check PBC_STATUS
 		if (PBC[j]) {
 			// add PBC_vector to get new node position
+			#pragma unroll
 			for (k = 0; k < DIM; k++){
 				r2[k] += PBC_vector[k];
 			}
 			// get force on node1 due to node2
 			forcevector(edge_force, r1, r2, L[j]);
 			// subtract back the PBC_vector to get original node position
+			#pragma unroll
 			for (k = 0; k < DIM; k++){
 				r2[k] -= PBC_vector[k];
 			}
@@ -655,7 +667,8 @@ void Network::get_forces(bool update_damage = false) {
 		else{
 			forcevector(edge_force, r1, r2, L[j]);
 		}
-			for (k = 0; k < DIM; k++){
+		#pragma unroll
+		for (k = 0; k < DIM; k++){
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
@@ -724,12 +737,13 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
-void Network::move_top_plate(float* v){
+void Network::move_top_plate(){
 	int node;
 	for(int i = 0; i<n_tside; i++){
 		node = tsideNodes[i];
+		#pragma unroll
 		for(int d=0; d<DIM; d++){
-			R[node*DIM + d] += TIME_STEP*v[d]; 
+			R[node*DIM + d] += TIME_STEP*vel[d]; 
 		}
 	}
 }
@@ -752,6 +766,7 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
+				#pragma unroll
 				for(d = 0; d<DIM; d++){
 					g = forces[DIM*node+d];
 					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
@@ -766,6 +781,18 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 	}
 	delete[] rms_history;
 	delete[] delR;
+}
+
+void Network::get_plate_forces(float* plate_forces, int iter){
+	int node;
+	for(int i=0; i<n_tside; i++){
+		node = tsideNodes[i];
+		plate_forces[iter*DIM+0] = forces[node*DIM + 0];
+		plate_forces[iter*DIM+1] = forces[node*DIM + 1];
+		if(DIM>2){
+			plate_forces[iter*DIM+2] = forces[node*DIM + 2];
+		}
+	}
 }
 
 // void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
@@ -787,18 +814,62 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 
 
 // }
+template <typename t>
+void write_to_file(string& fname, t* arr, int rows, int cols){
+
+	ofstream logger;
+	std::time_t result = std::time(nullptr);
+
+
+	cout<<"1D pulling of a 2D gel"<<endl;
+	cout<<"File created at "<<std::asctime(std::localtime(&result));
+	cout<<endl;
+
+	cout<<"Sim dimension : "<<DIM<<endl;
+	cout<<"Simulation time : "<<SIM_TIME<<endl;
+	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
+	cout<<endl;
+
+	cout<<"Disorder characteristics : "<<endl;
+	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
+	cout<<" -- L_STD : "<<L_STD<<endl;
+	cout<<endl;
+	
+	cout<<"Cracked? : "<<CRACKED<<endl;
+
+	logger.open(fname, ios::trunc|ios_base::out);
+	for(int i =0; i < rows; i++){
+		for(int j = 0; j< cols; j++){
+			logger<<arr[i*cols + j]<<"t";
+		}
+		logger<<"\n";
+	}
+}
 
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	float v[2] = {10.0, 0.0};
 	string path = "./template2d.msh";
 	Network test_network(path);
-	test_network.move_top_plate(v);
-	test_network.optimize();
-	// Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
-	// test2.apply_crack(defect);
+	float* plate_forces;
+
+	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+
+	clock_t t = clock();
+	cout<<"\n Will run for "<<STEPS<<":\n";
+	for(int i = 0; i<STEPS; i++ ){
+		test_network.optimize();
+		test_network.move_top_plate();
+		test_network.get_plate_forces(plate_forces, i);
+		cout<<"Step "<<i<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+		t = clock();  // reset clock
+	}
 	cout << "Compiled" << endl;
+
+	string fname = "forces_disorder_0.1.txt";
+	write_to_file<float>(fname, plate_forces, STEPS, DIM);
+
+	free(plate_forces);
 }
 
 
