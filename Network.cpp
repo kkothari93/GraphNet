@@ -292,7 +292,6 @@ void forcevector(float* result, float* r1, float* r2, float L){
 
 
 inline float kfe(float force_mag){
-	
 	float toRet =  ae * exp(force_mag * delxe / kB / T);
 	return toRet;
 }
@@ -629,6 +628,10 @@ void Network::get_forces(bool update_damage = false) {
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
 	float edge_force[DIM];
+	float rhat[DIM];
+	float s;
+	float force;
+
 
 	memset(forces, 0.0, n_nodes*DIM*sizeof(*forces));
 
@@ -657,15 +660,23 @@ void Network::get_forces(bool update_damage = false) {
 				r2[k] += PBC_vector[k];
 			}
 			// get force on node1 due to node2
-			forcevector(edge_force, r1, r2, L[j]);
+			s = dist(r1, r2);
+			unitvector(rhat, r1, r2);
+			force = force_wlc(s, L[j]);
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			convert_to_vector(edge_force, force, rhat);
 			// subtract back the PBC_vector to get original node position
-			#pragma unroll
-			for (k = 0; k < DIM; k++){
-				r2[k] -= PBC_vector[k];
-			}
+			// #pragma unroll
+			// for (k = 0; k < DIM; k++){
+			// 	r2[k] -= PBC_vector[k];
+			// }
 		}
 		else{
-			forcevector(edge_force, r1, r2, L[j]);
+			s = dist(r1, r2);
+			unitvector(rhat, r1, r2);
+			force = force_wlc(s, L[j]);
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
 		for (k = 0; k < DIM; k++){
@@ -674,13 +685,18 @@ void Network::get_forces(bool update_damage = false) {
 		}
 		//update damage if needed
 		if (update_damage){
-			damage[j] += kfe(getnorm(edge_force))*TIME_STEP;
+			damage[j] += kfe(force)*TIME_STEP;
 			//remove edge ... set to special value
-			if(damage[j] > 1.0){cout<<"Breaking bond between "
-				<<edges[j*2]<<" and "<<edges[2*j +1]<<endl;
+			if(damage[j] > 1.0){
+				cout<<"Breaking bond between "
+				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s = "<<force \
+				<<", "<<s<<endl;
+				for(int d = 0; d<DIM; d++){
+					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
+				}
+				cout<<endl;
 			edges[j*2] = -1; edges[j*2+1] = -1;}
 		}
-
 	}
 
 }
@@ -697,7 +713,7 @@ void Network::make_edge_connections(float dely_allowed) {
 			if (fabs(R[lnode*DIM + 1] - R[rnode*DIM + 1]) < dely_allowed){
 				edges[n_elems*2] = rnode;
 				edges[n_elems*2 + 1] = lnode;
-				//cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
+				cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
 				L[n_elems] = generator(seed);
 				damage[n_elems] = 0.0;
 				PBC[n_elems] = true;
@@ -737,6 +753,124 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
+int Network::get_current_edges(){
+	int n_elems_current = 0;
+	for(int i=0; i<n_elems; i++){
+		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
+			n_elems_current += 1;
+		}
+	}
+	cout<<"Number of edges are "<<n_elems_current<<"\n";
+	return n_elems_current;
+}
+
+bool Network::get_stats(){
+	int node1, node2;
+	int j, k, id; // loop variables
+	float r1[DIM]; float r2[DIM] ;
+	float mean_x = 0.0;
+	float mean_t = 0.0;
+	float var_x = 0.0;
+	float var_t = 0.0;
+	float max_x = 0.0;
+	float max_t = 0.0;
+	float s;
+	int short_L = 0;
+	float shortage = 0.0;
+	int c = 0;
+
+	for (j = 0; j < n_elems; j++){
+		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
+		node1 = edges[j * 2]; 
+		node2 = edges[j * 2 + 1];
+		
+		// check if pair exists
+		if(node1 == -1 || node2 == -1) {
+			continue;
+		}
+		c++;
+
+
+		// read the positions
+		#pragma unroll
+		for(k = 0; k<DIM; k++){
+			r1[k] = R[node1*DIM + k]; 
+			r2[k] = R[node2*DIM + k];
+		}
+		
+		// check PBC_STATUS
+		if (PBC[j]) {
+			// add PBC_vector to get new node position
+			#pragma unroll
+			for (k = 0; k < DIM; k++){
+				r2[k] += PBC_vector[k];
+			}
+			// check if L too short
+			s = dist(r1, r2);
+			mean_x += s;
+			mean_t += s/L[j];
+			if(s>max_x){max_x =s;}
+			if(s/L[j]>max_t){max_t=s/L[j];}
+			var_x += s*s;
+			var_t += s*s/L[j]/L[j];
+			if(s >= 0.99*L[j]){
+				short_L++;
+				shortage = s - L[j];
+			}
+		}
+		else{
+			s = dist(r1, r2);
+			mean_x += s;
+			mean_t += s/L[j];
+			if(s>max_x){max_x =s;}
+			if(s/L[j]>max_t){max_t=s/L[j];}
+			var_x += s*s;
+			var_t += s*s/L[j]/L[j];
+			if(s >= 0.99*L[j]){
+				short_L++;
+				shortage = s - L[j];
+			}
+		}
+	}
+	mean_x /= c;
+	var_x /= c;
+	var_x -= mean_x*mean_x;
+
+	mean_t /= c;
+	var_t /= c;
+	var_t -= mean_t*mean_t;
+
+	cout<<"Number of edges with x>0.99L: "<<short_L<<endl;
+	cout<<"node-node distance mean: "<<mean_x<<endl;
+	cout<<"node-node distance std_dev: "<<sqrt(var_x)<<endl;
+	cout<<"node-node distance max: "<<max_x<<endl;
+	cout<<"\n";
+	cout<<"node-node x/L mean: "<<mean_t<<endl;
+	cout<<"node-node x/L std_dev: "<<sqrt(var_t)<<endl;	
+	cout<<"node-node x/L max: "<<max_t<<endl;
+
+	if(shortage/get_weight() > 0.1){
+		cout<<"Disorder too high for given mesh! Exiting...\n";
+		return true;
+	}
+	return false;
+}
+
+float Network::get_weight(){
+	float sum_length = 0.0;
+	for(int i = 0; i < n_elems; i++){
+		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
+			sum_length += L[i];
+		}
+	}
+	cout<<"\nNetwork weight is "<<sum_length<<"\n";
+	return sum_length;
+}
+
+void Network::set_weight(float weight){
+// TODO
+}
+
 void Network::move_top_plate(){
 	int node;
 	for(int i = 0; i<n_tside; i++){
@@ -756,7 +890,7 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
@@ -779,6 +913,7 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 			break;
 		}
 	}
+	get_forces(true);
 	delete[] rms_history;
 	delete[] delR;
 }
@@ -787,8 +922,8 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	int node;
 	for(int i=0; i<n_tside; i++){
 		node = tsideNodes[i];
-		plate_forces[iter*DIM+0] = forces[node*DIM + 0];
-		plate_forces[iter*DIM+1] = forces[node*DIM + 1];
+		plate_forces[iter*DIM+0] += forces[node*DIM + 0];
+		plate_forces[iter*DIM+1] += forces[node*DIM + 1];
 		if(DIM>2){
 			plate_forces[iter*DIM+2] = forces[node*DIM + 2];
 		}
@@ -840,7 +975,7 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 	logger.open(fname, ios::trunc|ios_base::out);
 	for(int i =0; i < rows; i++){
 		for(int j = 0; j< cols; j++){
-			logger<<arr[i*cols + j]<<"t";
+			logger<<arr[i*cols + j]<<"\t";
 		}
 		logger<<"\n";
 	}
@@ -853,7 +988,13 @@ int main() {
 	Network test_network(path);
 	float* plate_forces;
 
+	test_network.get_weight();
+	bool should_stop = test_network.get_stats();
+
+	if(should_stop){return 0;}
+
 	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 
 	clock_t t = clock();
 	cout<<"\n Will run for "<<STEPS<<":\n";
@@ -861,15 +1002,19 @@ int main() {
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
-		cout<<"Step "<<i<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
-		t = clock();  // reset clock
+		if((i+1)%100 == 0){
+			test_network.get_stats();
+			test_network.get_current_edges();
+			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+			t = clock();  // reset clock
+		}
 	}
-	cout << "Compiled" << endl;
 
 	string fname = "forces_disorder_0.1.txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);
+	return 0;
 }
 
 
