@@ -50,7 +50,8 @@ void take_input(float* R, int* edges,
 	string line;
 	ifstream source;
 	stringstream in_pos;
-	source.open("/media/konik/New Volume/Poly Network/GMSH templates/template2d.msh");
+	source.open("/home/kkothar3/2d-sacrificial-bonds-polymers/GMSH templates/template2d.msh");
+
 
 	bool can_i_read_nodes= false,can_i_read_elems = false;
 	bool read_num_nodes = false, read_num_elems = false;

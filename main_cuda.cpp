@@ -21,11 +21,11 @@
 #define SIM_TIME 10.0						// Simulation time
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-#define L_MEAN 120.0d						// Average for contour length
-#define L_STD 4.0d							// Std. deviation for contour lengths
+#define L_MEAN 120.0f						// Average for contour length
+#define L_STD 4.0f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
-#define MAXBOUND 500.0d
-#define CRACKED true
+#define MAXBOUND 500.0f
+#define CRACKED false
 #define USE_CUDA true
 
 // Define constants
@@ -243,9 +243,14 @@ void optimize(float*R, int* edges, float* damage_integral, \
 	float forces[num_nodes*DIM];
 	float delR[num_nodes*DIM];
 	float g;
-	float rms_history[num_nodes*DIM] = {0.0}; // std-init ommitted 
-												   // elements to zero
-	float oneby_sqrt_rms_history[num_nodes*DIM] = {0.0};
+	float rms_history[num_nodes*DIM]; // std-init ommitted 
+	float oneby_sqrt_rms_history[num_nodes*DIM];
+
+	for(int i = 0; i<num_nodes*DIM; i++){
+		rms_history[i] = 0.0;
+		oneby_sqrt_rms_history[i] = 0.0;
+	}
+
 	for(int step = 0; step < max_iter; step++){
 		int id = 0;
 		zero_arr<float>(forces, num_nodes*DIM);
@@ -602,6 +607,8 @@ int main(){
 		}
 	}
 	
+	cout<<"Simulation DONE! Storing data...\n";
+
 	char rand_string[] = "forcesxxxxxx.txt";
 	gen_random(rand_string, 6);
 	
