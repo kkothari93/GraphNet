@@ -18,6 +18,7 @@
 #include "Network.h"
 
 
+
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
 #define SIM_TIME 10.0						// Simulation time
@@ -73,10 +74,16 @@ int main() {
 
   	// }
 
-	float * local_R;
-	int * local_edges;
+	int chunk_size = ceil((main_network->get_n_elems()*2)/world_size);
+	if (chunk_size % 2 == 1) { chunk_size += 1;}
 
-	main_network->split_for_MPI(local_R, local_edges, NULL, world_size, world_rank);
+	int lo = world_rank * chunk_size;
+	int hi = lo + chunk_size - 1;
+
+	//uniform L across all processors
+	MPI_Bcast(main_network->L, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(main_network->PBC, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
+	
 
 	int iter = 0; // needed to write forces later
 
@@ -95,9 +102,8 @@ int main() {
 
 
 		}
-		optimize(local_R, local_edges, damage, L, n_nodes, n_elems,\
-			PBC, PBC_vector, tsideNodes, n_tside, bsideNodes, n_bside,\
-			pull_forces, iter);
+		
+		main_network->optimize(lo, hi);
 	
 		get_components(p_x, p_y, pull_forces, iter);
 
@@ -111,7 +117,77 @@ int main() {
 		//send your bottommost to next proc
 		//receive one below your bottommost from next proc
 
+		// float * topmost_R_recv_buffer = new float[R_buffer];
+		// if (world_rank != 0) {
+		// 	MPI_Recv(topmost_R_recv_buffer, R_buffer, MPI_FLOAT, world_rank-1, 0, MPI_COMM_WORLD, NULL);
+		// }
+		
+		// float * topmost_R_send_buffer = new float[R_buffer];
+		// if (world_rank != 0) {
+		// 	for (int i = 0; i < R_buffer; i++) {
+		// 		topmost_R_send_buffer[i] = local_R[R_buffer+i];
+		// 	}
+		// 	MPI_Send(topmost_R_send_buffer, R_buffer, MPI_FLOAT, world_rank-1, 1, MPI_COMM_WORLD);
+		// }
+		
+		// float * bottommost_R_send_buffer = new float[R_buffer]
+		// for (int i = 0; i < R_buffer; i++) {
+		// 	bottommost_R_send_buffer[i] = local_R[/** to fill **/];
+		// }
+		// MPI_Send(bottommost_R_send_buffer, R_buffer, MPI_FLOAT, world_rank+1, 2, MPI_COMM_WORLD);
+		// float * bottommost_R_recv_buffer = new float[R_buffer];
+		// MPI_Recv(bottommost_R_recv_buffer, R_buffer, MPI_FLOAT, world_rank+1, 3, MPI_COMM_WORLD, NULL);
+
+		// for (int i = 0; i < R_buffer; i++) {
+		// 	local_R[i] = topmost_R_recv_buffer[i];
+		// 	local_R[/** to fill**/ + i] = bottommost_R_recv_buffer[i];
+		// }
+
+		// MPI_Barrier(MPI_COMM_WORLD);
+
+		float * recv_buffer = new float[main_network->get_n_elems()*2*world_size]
+		if (world_rank == 0) {
+
+		}
+
+		MPI_Gather(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, recv_buffer, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+		// for (int i = 0; i < world_size; i++) {
+		// 	for (int j = i * chunk_size; j < chunk_size * (i+1); j++) {
+		// 		R[j] = recv_buffer[main_network->get_n_elems()*2*i + j];
+		// 	}
+		// }
+
+		for (int i = 0; i < main_network->get_n_elems()*2; i++) {
+			int proc_to_copy_from = (R[i]/chunk_size);
+			R[i] = recv_buffer[main_network->get_n_elems()*2*proc_to_copy_from + i];
+		}
+
+		MPI_Bcast(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		delete[] recv_buffer;
+		MPI_Barrier(MPI_COMM_WORLD);
 	}
+
+	//aggregation:
+
+
+
+	float *  R_recv_buffer;
+	float *  R_send_buffer = new float[R_split_size];
+	if (world_rank == 0) {
+		R_recv_buffer = new float[/**to fill**/];
+	}
+	for (int i = 0; i < R_split_size; i++) {
+		R_send_buffer[i] = local_R[R_buffer+i];
+	}
+
+	MPI_Gather(R_send_buffer, R_buffer, MPI_FLOAT, R_recv_buffer, R_buffer, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+	MPI_Barrier(MPI_COMM_WORLD);
+
+
+
+
 
 
 

@@ -614,7 +614,7 @@ void Network::copy(Network const & source) {
 
 }
 
-void Network::get_forces(bool update_damage = false) {
+void Network::get_forces(bool update_damage = false, int lo, int hi) {
 
 	int node1, node2;
 	int j, k, id; // loop variables
@@ -632,6 +632,13 @@ void Network::get_forces(bool update_damage = false) {
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
+
+		if (!(node1 >= lo && node1 <= hi && node2 >= lo && node2 <= hi)) {
+			//!TODO: check logic here
+			continue;
+		}
+
+
 
 		// read the positions
 		for(k = 0; k<DIM; k++){
@@ -655,7 +662,7 @@ void Network::get_forces(bool update_damage = false) {
 		else{
 			forcevector(edge_force, r1, r2, L[j]);
 		}
-			for (k = 0; k < DIM; k++){
+		for (k = 0; k < DIM; k++){
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
@@ -693,6 +700,10 @@ void Network::make_edge_connections(float dely_allowed) {
 		}
 	}
 
+}
+
+int Network::get_n_elems() {
+	return n_elems;
 }
 
 void Network::apply_crack(Crack const & crack) {
@@ -742,13 +753,13 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, int lo, int hi){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
-		get_forces(false);
+		get_forces(false, lo, hi);
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
@@ -768,60 +779,60 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 	delete[] delR;
 }
 
-void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+// void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
 
-	int R_total = n_nodes * DIM;
-	int R_split_size = ceil(R_total/number_of_procs);
-	int R_buffer = 0; //need to change
-	R_split = new float[R_split_size];
+// 	int R_total = n_nodes * DIM;
+// 	int R_split_size = ceil(R_total/number_of_procs);
+// 	int R_buffer = 0; //need to change
+// 	R_split = new float[R_split_size];
 
-	if (curr_proc_rank == 0) {
+// 	if (curr_proc_rank == 0) {
 
-		for (int i = 0; i < R_split_size + R_buffer; i++) {
-			R_split[i] = R[i];
-		}
+// 		for (int i = 0; i < R_split_size + R_buffer; i++) {
+// 			R_split[i] = R[i];
+// 		}
 
-	}
-	else if (curr_proc_rank < number_of_procs-1) {
+// 	}
+// 	else if (curr_proc_rank < number_of_procs-1) {
 
-		for (int i = curr_proc_rank*R_split_size - R_buffer, int j = 0; i < (curr_proc_rank+1)*(R_split_size) + R_buffer; i++, j++) {
-			R_split[j] = R[i];
-		}
+// 		for (int i = curr_proc_rank*R_split_size - R_buffer, int j = 0; i < (curr_proc_rank+1)*(R_split_size) + R_buffer; i++, j++) {
+// 			R_split[j] = R[i];
+// 		}
 
-	}
-	else if (curr_proc_rank == number_of_procs-1) {
+// 	}
+// 	else if (curr_proc_rank == number_of_procs-1) {
 
-		for (int i = curr_proc_rank * number_of_procs - R_buffer, int j = 0; i < R_total; i++, j++) {
-			R_split[i] = R[j];
-		}
-	}
+// 		for (int i = curr_proc_rank * number_of_procs - R_buffer, int j = 0; i < R_total; i++, j++) {
+// 			R_split[j] = R[i];
+// 		}
+// 	}
 
-	int edges_total = n_elems*2;
-	int edges_split_size = ceil(edges_total/number_of_procs);
-	edges_split = new float[edges_split_size];
+// 	int edges_total = n_elems*2;
+// 	int edges_split_size = ceil(edges_total/number_of_procs);
+// 	edges_split = new float[edges_split_size];
 
-	if (curr_proc_rank == 0) {
-
-
-
-	}
-	else if (curr_proc_rank < number_of_procs-1) {
-
-		for (int i = curr_proc_rank*edges_split_size, int j = 0; i < (curr_proc_rank+1)*(edges_split_size); i++, j++) {
-			edges_split[j] = R[i];
-		}
-
-	}
-	else if (curr_proc_rank == number_of_procs-1) {
-
-		for (int i = curr_proc_rank * number_of_procs, int j = 0; i < edge_total; i++, j++) {
-			edges_split[i] = R[j];
-		}
-	}
+// 	if (curr_proc_rank == 0) {
 
 
 
-}
+// 	}
+// 	else if (curr_proc_rank < number_of_procs-1) {
+
+// 		for (int i = curr_proc_rank*edges_split_size, int j = 0; i < (curr_proc_rank+1)*(edges_split_size); i++, j++) {
+// 			edges_split[j] = R[i];
+// 		}
+
+// 	}
+// 	else if (curr_proc_rank == number_of_procs-1) {
+
+// 		for (int i = curr_proc_rank * number_of_procs, int j = 0; i < edge_total; i++, j++) {
+// 			edges_split[i] = R[j];
+// 		}
+// 	}
+
+
+
+// }
 
 int main() {
 
@@ -834,6 +845,7 @@ int main() {
 	// Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
 	// test2.apply_crack(defect);
 	cout << "Compiled" << endl;
+	cout << sizeof(*test_network) << endl;
 }
 
 
