@@ -380,6 +380,7 @@ void get_file(const string& filename, float* arr, \
 		}
 		fout<<endl;
 	}
+	cout<<"Written to file!\n"<<filename<<"\n";
 	fout.close();
 }
 
@@ -586,7 +587,7 @@ int main(){
 
 	if(USE_CUDA){
 		// pull on CUDA
-		pull_CUDA(&vars, STEPS);
+		pull_CUDA(&vars, 1000);
 	}
 	else{
 		// pull on host
@@ -609,14 +610,11 @@ int main(){
 	
 	cout<<"Simulation DONE! Storing data...\n";
 
-	char rand_string[] = "forcesxxxxxx.txt";
-	gen_random(rand_string, 6);
+	string filename = "forces.txt";
 	
-	get_file(rand_string, pull_forces, DIM, iter);
+	get_file(filename, pull_forces, DIM, 1000);
 
 	// wait to check out the plots	
-	char p;
-	cin>>p;
 
 	// free all variables on CPU
 	free(pull_forces);
