@@ -60,13 +60,13 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(bool);
+	bool get_forces(bool, int lo, int hi);
 	void move_top_plate();
 	void get_plate_forces(float*, int);
-	void optimize(float, float, int);
+	void optimize(float, float, int, int lo, int hi, bool BROKEN);
 	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
 
-private:
+//private:
 
 	void clear();
 	void copy(Network const & source);

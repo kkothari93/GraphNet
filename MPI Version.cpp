@@ -53,66 +53,86 @@ int main() {
   	int world_rank;
   	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-  	// Get the name of the processor
-  	// char processor_name[MPI_MAX_PROCESSOR_NAME];
-  	// int name_len;
-  	// MPI_Get_processor_name(processor_name, &name_len);
+  	
 
   	Network * main_network = NULL;
   	String fname = "";
   	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
-
-
-  	// int number_of_edges_per_process = Z_MAX*n_nodes*2/world_size;
-  	// int * edges_this_process = new int[number_of_edges_per_process];
-
-  	// int k = 0;
-  	// for (int i = number_of_edges_per_process * world_rank; i < min(number_of_edges_per_process * (world_rank+1), Z_MAX*n_nodes*2); i++) {
-
-  	// 	edges_this_process[k] = edges[i];
-  	// 	k++;
-
-  	// }
-	//TODO: get_n_elems() -- n_nodes
-	int chunk_size = ceil((main_network->get_n_elems()*2)/world_size);
-	//if (chunk_size % 2 == 1) { chunk_size += 1;}
-
+	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
+	
 	int lo = world_rank * chunk_size;
 	int hi = lo + chunk_size - 1;
 
-	//uniform L across all processors
+	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(main_network->PBC, main_network->get_n_elems(), MPI_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	float * recv_buffer;
-
+	float * recv_buffer = new float[main_network->n_nodes * 2 * world_size]; //buffer to gather the R from all nodes
+	bool * broken_buffer = new bool[world_size];
+	int * edges_buffer = new int[main_network->n_elems * 2 * world_size];
 	int iter = 0; // needed to write forces later
-
 	for(iter = 0; iter<STEPS; iter++){
 		if((iter+1)%1000 == 0){ // +1 required to have values in p_x, p_y
 			cout<<(iter+1)<<endl; 
 			cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
-
-			// plot network
-			//plot_network(gnetwork, R, edges, PBC, \
-			 	//n_nodes, n_elems, iter);
-			
-			// Plot forces
-			//plot_forces(gforces, p_x, p_y, iter);
-
-
 		}
+		bool BROKEN = false;
 		//TODO: add broken flag
-		main_network->optimize(lo, hi);
+		main_network->optimize(lo, hi, broken);
 		//TODO: use Network::get_plate_forces() on root proc
-		get_components(p_x, p_y, pull_forces, iter);
 
 		if (world_rank == 0) {
-			move_top_nodes(R, tsideNodes, n_tside);
+			//move_top_nodes(R, tsideNodes, n_tside);
+			main_network->move_top_plate();
+			main_network->get_plate_forces(/** not sure what to put here **/, iter);
 		}
 		
-		//sync step:
+		//TODO: check the size of array parameter
+		MPI_Gather(main_network->R, main_network->n_nodes * 2, MPI_FLOAT, recv_buffer, main_network->n_nodes * 2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		if (world_rank == 0) {
+			for (int i = 0; i < main_network->n_nodes * 2; i++) {
+				int proc_to_copy_from = (R[i]/chunk_size);
+				R[i] = recv_buffer[main_network->n_nodes * 2 * proc_to_copy_from + i];
+			}
+		}
+		
+		MPI_Bcast(main_network->R, main_network->n_nodes * 2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+
+		//checking if edges need to be resynced
+		MPI_Allgather(&BROKEN, 1, MPI_BOOL, broken_buffer, 1, MPI_BOOL, MPI_COMM_WORLD);
+		
+		bool need_edges_resyncing = false;
+		for (int i = 0; i < world_size; i++) {
+			need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
+			if (need_edges_resyncing) {
+				break;
+			}
+		}
+		if (need_edges_resyncing) {
+			MPI_Gather(main_network->edges, main_network->n_elems * 2, MPI_INT, edges_buffer, main_network->n_elems * 2, MPI_INT, 0, MPI_COMM_WORLD);
+			if (world_rank == 0) {
+				for (int i = 0; i < main_network->n_elems * 2; i += 2) {
+					int proc_to_copy_from = i / chunk_size;
+					main_network->edges[i] = edges_buffer[main_network->n_elems * 2 * proc_to_copy_from + i];
+					main_network->edges[i+1] = edges_buffer[main_network->n_elems * 2 * proc_to_copy_from + i + 1];
+				}
+			}
+			MPI_Bcast(main_network->edges, main_network->n_elems * 2, MPI_INT, 0, MPI_COMM_WORLD);
+			
+		}
+
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+
+	MPI_Finalize();
+
+}
+
+
+
+//sync step:
 		//receive one above your topmost from prev_proc
 		//send your topmost to the prev proc
 		//send your bottommost to next proc
@@ -146,29 +166,6 @@ int main() {
 
 		// MPI_Barrier(MPI_COMM_WORLD);
 
-		float * recv_buffer = new float[main_network->get_n_elems()*2*world_size]
-		if (world_rank == 0) {
-
-		}
-		//TODO: check the size of array parameter
-		MPI_Gather(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, recv_buffer, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-		// for (int i = 0; i < world_size; i++) {
-		// 	for (int j = i * chunk_size; j < chunk_size * (i+1); j++) {
-		// 		R[j] = recv_buffer[main_network->get_n_elems()*2*i + j];
-		// 	}
-		// }
-
-		for (int i = 0; i < main_network->get_n_elems()*2; i++) {
-			int proc_to_copy_from = (R[i]/chunk_size);
-			R[i] = recv_buffer[main_network->get_n_elems()*2*proc_to_copy_from + i];
-		}
-
-		MPI_Bcast(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		//delete[] recv_buffer;
-		MPI_Barrier(MPI_COMM_WORLD);
-	}
-
 	//aggregation:
 
 
@@ -186,25 +183,9 @@ int main() {
 
 	// MPI_Barrier(MPI_COMM_WORLD);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  	MPI_Finalize();
-
-}
+// plot network
+			//plot_network(gnetwork, R, edges, PBC, \
+			 	//n_nodes, n_elems, iter);
+			
+			// Plot forces
+			//plot_forces(gforces, p_x, p_y, iter);
