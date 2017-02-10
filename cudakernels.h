@@ -26,6 +26,4 @@ __device__ float kfe_cuda(float);
 
 __device__ float force_wlc_cuda(float, float);
 
-__device__ bool notmember(int, const int*, int, const int*, int);
-
 void pull_CUDA(hostvars*, int);

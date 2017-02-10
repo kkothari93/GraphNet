@@ -30,20 +30,6 @@ __device__ float force_wlc_cuda(float x, float L){
 	else { return 999999.0; }
 }
 
-__device__ bool notmember(int id, const int* bnodes, int n_bnodes, \
-	const int* tnodes, int n_tnodes){
-	bool out = false;
-	for(int i=0;i<max(n_tnodes, n_bnodes);i++){
-		if(i<n_tnodes){
-			if(id==tnodes[i]){out=true; break;}
-		}
-		if(i<n_bnodes){
-			if(id==bnodes[i]){out=true; break;}
-		}
-	}
-	return out;
-}
-
 __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float* forces, \
 	const float* chain_len, const int num_nodes, const int num_edges, \
 	const bool* PBC_STATUS, const float* PBC_vector, \
@@ -64,6 +50,7 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 	int pair, edge_num, n1, n2, n_t;
 	float L, x1, x2, y1, y2, dist, force, diss_energy, top_force_x, top_force_y;
 	float unitvector[DIM];
+	if(tid<num_edges){
 	for(int iter = 0; iter<n_steps; iter++){
 		for(int step = 0; step < max_iter_opt; step++){
 			///////////////////////////////////////////////
@@ -76,7 +63,6 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 			// Assign threads to edges
 			pair = tid * 2;
 			edge_num = tid; 
-			if(tid<num_edges){
 			L = chain_len[edge_num];
 
 			// read the nodes that the thread has been assigned
@@ -155,7 +141,6 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 				R[n1*2 + 1] += delR[1];
 			}
 			__syncthreads();
-		}
 
 		// Update damage integral
 		diss_energy = kfe_cuda(force)*TIME_STEP;
@@ -190,6 +175,7 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 	//		t = clock();
 	//	}
 	}
+}
 }
 
 
@@ -242,7 +228,7 @@ void pull_CUDA(hostvars* vars, int n_steps){
 	cudaMemcpy(damage_d, vars->damage, 2*n_elems*sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(pull_forces_d, vars->pull_forces, n_steps*DIM*sizeof(float), cudaMemcpyHostToDevice);
 	printf("Transfer successful! \n");
-	
+
 	// Define grid and block size
 	// Launch atleast as many threads as edges
 	dim3 gridsize((n_elems-1)/BLOCK_SIZE + 1);
