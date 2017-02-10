@@ -17,18 +17,20 @@
 #include <cstring>
 #include "crack.h"
 #include <stddef.h>
+#include "vel.h"
 using namespace std;
 
 #define __params__	
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 10.0						// Simulation time
+#define SIM_TIME 5.0						// Simulation time
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 120.0f						// Average for contour length
-#define L_STD 4.0f							// Std. deviation for contour lengths
+#define L_STD 20.0f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
+#define CRACKED false
 
 // Define constants
 #define __constants__
@@ -43,11 +45,11 @@ using namespace std;
 using namespace std;
 
 const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+const float vel[DIM] = {vel_x, vel_y};
 
 class Network {
 
 public:
-
 	Network();
 	Network(Network const & source);
 	Network(string& fname);
@@ -58,13 +60,13 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	bool get_forces(bool, int lo, int hi);
-	void move_top_plate(float*);
-	void optimize(float, float, int, int lo, int hi);
-	int get_n_elems();
-	//void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
+	void get_forces(bool);
+	void move_top_plate();
+	void get_plate_forces(float*, int);
+	void optimize(float, float, int);
+	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
 
-//private:
+private:
 
 	void clear();
 	void copy(Network const & source);

@@ -57,9 +57,11 @@ inline bool contains(vector<int>& vec, int elem){
 }
 
 inline float getnorm(const float* vec, const int dim = DIM){
-	float s = 0;
+	float s = 0,t;
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
-		s += pow(vec[j], 2);
+		t = vec[j];
+		s += t*t;
 	}
 	return sqrt(s);
 }
@@ -220,6 +222,7 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
 	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	#pragma unroll
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
 		damage[i] = 0.0;
@@ -229,6 +232,7 @@ void __init__(float* L, float* damage, bool* PBC, int n_elems){
 
 inline void normalize_vector(float* result, const float* vec){
 	float norm = getnorm(vec);
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		result[i] = vec[i] / norm;
 	}
@@ -241,12 +245,14 @@ inline bool does_file_exist(string& fname){
 
 inline void normalize_vector(float* vec){
 	float norm = getnorm(vec);
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		vec[i] = vec[i] / norm;
 	}
 }
 
 inline void unitvector(float* result, float* r1, float* r2){
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
 		result[j] = r1[j] - r2[j];
 	}
@@ -260,15 +266,18 @@ inline float force_wlc(float x, float L){
 }
 
 inline void convert_to_vector(float* result, const float mag, const float* direction){
+	#pragma unroll
 	for (int i = 0; i<DIM; i++){
 		result[i] = mag*direction[i];
 	}
 }
 
 inline float dist(const float* r1, const float* r2){
-	float s = 0.0;
+	float s = 0.0, t;
+	#pragma unroll
 	for (int j = 0; j<DIM; j++){
-		s += pow(r1[j] - r2[j], 2.0);
+		t = r1[j] - r2[j];
+		s += t * t;
 	}
 	return sqrt(s);
 }
@@ -614,9 +623,8 @@ void Network::copy(Network const & source) {
 
 }
 
-bool Network::get_forces(bool update_damage = false, int lo, int hi) {
+void Network::get_forces(bool update_damage = false) {
 
-	bool BROKEN = false;
 	int node1, node2;
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
@@ -634,14 +642,8 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 			continue;
 		}
 
-		if ((node1 <= lo || node1 >= hi || node2 <= lo || node2 >= hi)) {
-			//!TODO: check logic here
-			continue;
-		}
-
-
-
 		// read the positions
+		#pragma unroll
 		for(k = 0; k<DIM; k++){
 			r1[k] = R[node1*DIM + k]; 
 			r2[k] = R[node2*DIM + k];
@@ -650,12 +652,14 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 		// check PBC_STATUS
 		if (PBC[j]) {
 			// add PBC_vector to get new node position
+			#pragma unroll
 			for (k = 0; k < DIM; k++){
 				r2[k] += PBC_vector[k];
 			}
 			// get force on node1 due to node2
 			forcevector(edge_force, r1, r2, L[j]);
 			// subtract back the PBC_vector to get original node position
+			#pragma unroll
 			for (k = 0; k < DIM; k++){
 				r2[k] -= PBC_vector[k];
 			}
@@ -663,23 +667,22 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 		else{
 			forcevector(edge_force, r1, r2, L[j]);
 		}
+		#pragma unroll
 		for (k = 0; k < DIM; k++){
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
 		//update damage if needed
-		if (update_damage && (node1 < node2){
+		if (update_damage){
 			damage[j] += kfe(getnorm(edge_force))*TIME_STEP;
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){cout<<"Breaking bond between "
 				<<edges[j*2]<<" and "<<edges[2*j +1]<<endl;
-			edges[j*2] = -1; edges[j*2+1] = -1;
-			BROKEN = true;
-		}
+			edges[j*2] = -1; edges[j*2+1] = -1;}
 		}
 
 	}
-	return BROKEN;
+
 }
 
 void Network::make_edge_connections(float dely_allowed) {
@@ -703,10 +706,6 @@ void Network::make_edge_connections(float dely_allowed) {
 		}
 	}
 
-}
-
-int Network::get_n_elems() {
-	return n_elems;
 }
 
 void Network::apply_crack(Crack const & crack) {
@@ -738,12 +737,13 @@ void Network::apply_crack(Crack const & crack) {
 
 }
 
-void Network::move_top_plate(float* v){
+void Network::move_top_plate(){
 	int node;
 	for(int i = 0; i<n_tside; i++){
 		node = tsideNodes[i];
+		#pragma unroll
 		for(int d=0; d<DIM; d++){
-			R[node*DIM + d] += TIME_STEP*v[d]; 
+			R[node*DIM + d] += TIME_STEP*vel[d]; 
 		}
 	}
 }
@@ -756,16 +756,17 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, int lo, int hi, bool& BROKEN){
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
-		get_forces(false, lo, hi);
+		get_forces(false);
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
+				#pragma unroll
 				for(d = 0; d<DIM; d++){
 					g = forces[DIM*node+d];
 					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
@@ -778,78 +779,139 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, 
 			break;
 		}
 	}
-	// BROKEN = get_forces
 	delete[] rms_history;
 	delete[] delR;
 }
 
+<<<<<<< HEAD
+void Network::get_plate_forces(float* plate_forces, int iter){
+	int node;
+	for(int i=0; i<n_tside; i++){
+		node = tsideNodes[i];
+		plate_forces[iter*DIM+0] = forces[node*DIM + 0];
+		plate_forces[iter*DIM+1] = forces[node*DIM + 1];
+		if(DIM>2){
+			plate_forces[iter*DIM+2] = forces[node*DIM + 2];
+		}
+	}
+}
+
 // void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+=======
+void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
+>>>>>>> 1272b498a79e1bc120b056c179a87248477f3c51
 
-// 	int R_total = n_nodes * DIM;
-// 	int R_split_size = ceil(R_total/number_of_procs);
-// 	int R_buffer = 0; //need to change
-// 	R_split = new float[R_split_size];
+	int R_total = n_nodes * DIM;
+	int R_split_size = ceil(R_total/number_of_procs);
+	int R_buffer = 0; //need to change
+	R_split = new float[R_split_size];
 
-// 	if (curr_proc_rank == 0) {
+	if (curr_proc_rank == 0) {
 
-// 		for (int i = 0; i < R_split_size + R_buffer; i++) {
-// 			R_split[i] = R[i];
-// 		}
+		for (int i = 0; i < R_split_size + R_buffer; i++) {
+			R_split[i] = R[i];
+		}
 
-// 	}
-// 	else if (curr_proc_rank < number_of_procs-1) {
+	}
+	else if (curr_proc_rank < number_of_procs-1) {
 
-// 		for (int i = curr_proc_rank*R_split_size - R_buffer, int j = 0; i < (curr_proc_rank+1)*(R_split_size) + R_buffer; i++, j++) {
-// 			R_split[j] = R[i];
-// 		}
+		for (int i = curr_proc_rank*R_split_size - R_buffer, int j = 0; i < (curr_proc_rank+1)*(R_split_size) + R_buffer; i++, j++) {
+			R_split[j] = R[i];
+		}
 
-// 	}
-// 	else if (curr_proc_rank == number_of_procs-1) {
+	}
+	else if (curr_proc_rank == number_of_procs-1) {
 
-// 		for (int i = curr_proc_rank * number_of_procs - R_buffer, int j = 0; i < R_total; i++, j++) {
-// 			R_split[j] = R[i];
-// 		}
-// 	}
-
-// 	int edges_total = n_elems*2;
-// 	int edges_split_size = ceil(edges_total/number_of_procs);
-// 	edges_split = new float[edges_split_size];
-
-// 	if (curr_proc_rank == 0) {
-
-
-
-// 	}
-// 	else if (curr_proc_rank < number_of_procs-1) {
-
-// 		for (int i = curr_proc_rank*edges_split_size, int j = 0; i < (curr_proc_rank+1)*(edges_split_size); i++, j++) {
-// 			edges_split[j] = R[i];
-// 		}
-
-// 	}
-// 	else if (curr_proc_rank == number_of_procs-1) {
-
-// 		for (int i = curr_proc_rank * number_of_procs, int j = 0; i < edge_total; i++, j++) {
-// 			edges_split[i] = R[j];
-// 		}
-// 	}
-
-
-
+<<<<<<< HEAD
 // }
+template <typename t>
+void write_to_file(string& fname, t* arr, int rows, int cols){
+
+	ofstream logger;
+	std::time_t result = std::time(nullptr);
+
+
+	cout<<"1D pulling of a 2D gel"<<endl;
+	cout<<"File created at "<<std::asctime(std::localtime(&result));
+	cout<<endl;
+
+	cout<<"Sim dimension : "<<DIM<<endl;
+	cout<<"Simulation time : "<<SIM_TIME<<endl;
+	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
+	cout<<endl;
+
+	cout<<"Disorder characteristics : "<<endl;
+	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
+	cout<<" -- L_STD : "<<L_STD<<endl;
+	cout<<endl;
+	
+	cout<<"Cracked? : "<<CRACKED<<endl;
+
+	logger.open(fname, ios::trunc|ios_base::out);
+	for(int i =0; i < rows; i++){
+		for(int j = 0; j< cols; j++){
+			logger<<arr[i*cols + j]<<"t";
+		}
+		logger<<"\n";
+	}
+=======
+		for (int i = curr_proc_rank * number_of_procs - R_buffer, int j = 0; i < R_total; i++, j++) {
+			R_split[i] = R[j];
+		}
+	}
+
+	int edges_total = n_elems*2;
+	int edges_split_size = ceil(edges_total/number_of_procs);
+	edges_split = new float[edges_split_size];
+
+	if (curr_proc_rank == 0) {
+
+
+
+	}
+	else if (curr_proc_rank < number_of_procs-1) {
+
+		for (int i = curr_proc_rank*edges_split_size, int j = 0; i < (curr_proc_rank+1)*(edges_split_size); i++, j++) {
+			edges_split[j] = R[i];
+		}
+
+	}
+	else if (curr_proc_rank == number_of_procs-1) {
+
+		for (int i = curr_proc_rank * number_of_procs, int j = 0; i < edge_total; i++, j++) {
+			edges_split[i] = R[j];
+		}
+	}
+
+
+
+>>>>>>> 1272b498a79e1bc120b056c179a87248477f3c51
+}
 
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	float v[2] = {10.0, 0.0};
 	string path = "./template2d.msh";
 	Network test_network(path);
-	test_network.move_top_plate(v);
-	test_network.optimize();
-	// Crack defect(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/4.0, MAXBOUND/10.0);
-	// test2.apply_crack(defect);
+	float* plate_forces;
+
+	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+
+	clock_t t = clock();
+	cout<<"\n Will run for "<<STEPS<<":\n";
+	for(int i = 0; i<STEPS; i++ ){
+		test_network.optimize();
+		test_network.move_top_plate();
+		test_network.get_plate_forces(plate_forces, i);
+		cout<<"Step "<<i<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+		t = clock();  // reset clock
+	}
 	cout << "Compiled" << endl;
-	cout << sizeof(*test_network) << endl;
+
+	string fname = "forces_disorder_0.1.txt";
+	write_to_file<float>(fname, plate_forces, STEPS, DIM);
+
+	free(plate_forces);
 }
 
 
