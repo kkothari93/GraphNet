@@ -930,25 +930,6 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	}
 }
 
-// void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
-
-// 	int R_total = n_nodes * DIM;
-// 	int R_split_size = ceil(R_total/number_of_procs);
-
-// 	if (curr_proc_rank < number_of_procs-1) {
-
-// 		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
-// 			R_split[j] = R[i];
-// 		}
-
-// 	}
-// 	else if (curr_proc_rank == number_of_procs-1) {
-
-// 		for (int i = 0; )
-// 	}
-
-
-// }
 template <typename t>
 void write_to_file(string& fname, t* arr, int rows, int cols){
 
@@ -986,19 +967,26 @@ int main() {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
 	Network test_network(path);
-	float* plate_forces;
+	cout<<"the size of network is "<<sizeof(*test_network)<<endl;
+
 
 	test_network.get_weight();
 	bool should_stop = test_network.get_stats();
 
-	if(should_stop){return 0;}
 
+	if(should_stop){return 0;}
+	float* plate_forces;
 	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 
+	if(CRACKED){
+		Crack crack1(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/6.0, MAXBOUND/10.0);
+		test_network.apply_crack(crack1);
+	}
+
 	clock_t t = clock();
 	cout<<"\n Will run for "<<STEPS<<":\n";
-	for(int i = 0; i<STEPS; i++ ){
+	for(int i = 0; i<0*STEPS; i++ ){
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
@@ -1010,7 +998,7 @@ int main() {
 		}
 	}
 
-	string fname = "forces_disorder_0.1.txt";
+	string fname = "forces_disorder_0.05_cracked.txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);

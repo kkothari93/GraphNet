@@ -7,15 +7,14 @@ struct hostvars{
 	// to device need to be placed here
 	const float* PBC_vector;
 	float* R; int* edges;
-	float* forces;
-	int* bsideNodes; int* tsideNodes;
-	int* lsideNodes; int* rsideNodes;
+	float* forces; float* damage;
+	int* tsideNodes;
+	int* moving_nodes;
 	bool* PBC;
-	float* L; float* damage;
+	float* L; 
 	float* pull_forces;
 	int n_nodes, n_elems;
-	int n_tnodes, n_bnodes;
-	int n_side_nodes;
+	int n_tnodes, n_moving;
 };
 
 __global__ void optimize_cuda(float*, int*, float*, float*, \

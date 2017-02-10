@@ -27,10 +27,10 @@ using namespace std;
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 120.0f						// Average for contour length
-#define L_STD 20.0f							// Std. deviation for contour lengths
+#define L_STD 6.0f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
-#define CRACKED false
+#define CRACKED true
 
 // Define constants
 #define __constants__
