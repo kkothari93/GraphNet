@@ -60,6 +60,7 @@ int main() {
 
   	Network * main_network = NULL;
   	String fname = "";
+  	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
 
 
@@ -73,17 +74,17 @@ int main() {
   	// 	k++;
 
   	// }
-
+	//TODO: get_n_elems() -- n_nodes
 	int chunk_size = ceil((main_network->get_n_elems()*2)/world_size);
-	if (chunk_size % 2 == 1) { chunk_size += 1;}
+	//if (chunk_size % 2 == 1) { chunk_size += 1;}
 
 	int lo = world_rank * chunk_size;
 	int hi = lo + chunk_size - 1;
 
 	//uniform L across all processors
 	MPI_Bcast(main_network->L, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD);
-	MPI_Bcast(main_network->PBC, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	
+	MPI_Bcast(main_network->PBC, main_network->get_n_elems(), MPI_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
+	float * recv_buffer;
 
 	int iter = 0; // needed to write forces later
 
@@ -102,9 +103,9 @@ int main() {
 
 
 		}
-		
+		//TODO: add broken flag
 		main_network->optimize(lo, hi);
-	
+		//TODO: use Network::get_plate_forces() on root proc
 		get_components(p_x, p_y, pull_forces, iter);
 
 		if (world_rank == 0) {
@@ -149,7 +150,7 @@ int main() {
 		if (world_rank == 0) {
 
 		}
-
+		//TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, recv_buffer, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 		// for (int i = 0; i < world_size; i++) {
@@ -164,7 +165,7 @@ int main() {
 		}
 
 		MPI_Bcast(main_network->R, main_network->get_n_elems()*2, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		delete[] recv_buffer;
+		//delete[] recv_buffer;
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 
@@ -172,18 +173,18 @@ int main() {
 
 
 
-	float *  R_recv_buffer;
-	float *  R_send_buffer = new float[R_split_size];
-	if (world_rank == 0) {
-		R_recv_buffer = new float[/**to fill**/];
-	}
-	for (int i = 0; i < R_split_size; i++) {
-		R_send_buffer[i] = local_R[R_buffer+i];
-	}
+	// float *  R_recv_buffer;
+	// float *  R_send_buffer = new float[R_split_size];
+	// if (world_rank == 0) {
+	// 	R_recv_buffer = new float[/**to fill**/];
+	// }
+	// for (int i = 0; i < R_split_size; i++) {
+	// 	R_send_buffer[i] = local_R[R_buffer+i];
+	// }
 
-	MPI_Gather(R_send_buffer, R_buffer, MPI_FLOAT, R_recv_buffer, R_buffer, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	// MPI_Gather(R_send_buffer, R_buffer, MPI_FLOAT, R_recv_buffer, R_buffer, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	// MPI_Barrier(MPI_COMM_WORLD);
 
 
 

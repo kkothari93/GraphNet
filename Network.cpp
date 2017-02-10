@@ -614,8 +614,9 @@ void Network::copy(Network const & source) {
 
 }
 
-void Network::get_forces(bool update_damage = false, int lo, int hi) {
+bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 
+	bool BROKEN = false;
 	int node1, node2;
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
@@ -633,7 +634,7 @@ void Network::get_forces(bool update_damage = false, int lo, int hi) {
 			continue;
 		}
 
-		if (!(node1 >= lo && node1 <= hi && node2 >= lo && node2 <= hi)) {
+		if ((node1 <= lo || node1 >= hi || node2 <= lo || node2 >= hi)) {
 			//!TODO: check logic here
 			continue;
 		}
@@ -667,16 +668,18 @@ void Network::get_forces(bool update_damage = false, int lo, int hi) {
 			forces[node2*DIM + k] += edge_force[k];
 		}
 		//update damage if needed
-		if (update_damage){
+		if (update_damage && (node1 < node2){
 			damage[j] += kfe(getnorm(edge_force))*TIME_STEP;
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){cout<<"Breaking bond between "
 				<<edges[j*2]<<" and "<<edges[2*j +1]<<endl;
-			edges[j*2] = -1; edges[j*2+1] = -1;}
+			edges[j*2] = -1; edges[j*2+1] = -1;
+			BROKEN = true;
+		}
 		}
 
 	}
-
+	return BROKEN;
 }
 
 void Network::make_edge_connections(float dely_allowed) {
@@ -753,7 +756,7 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, int lo, int hi){
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, int lo, int hi, bool& BROKEN){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
@@ -775,6 +778,7 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 1000, 
 			break;
 		}
 	}
+	// BROKEN = get_forces
 	delete[] rms_history;
 	delete[] delR;
 }

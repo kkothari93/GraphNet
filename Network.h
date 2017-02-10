@@ -58,7 +58,7 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(bool, int lo, int hi);
+	bool get_forces(bool, int lo, int hi);
 	void move_top_plate(float*);
 	void optimize(float, float, int, int lo, int hi);
 	int get_n_elems();
