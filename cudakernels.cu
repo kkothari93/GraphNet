@@ -59,6 +59,11 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 			// Here each edge is assigned one thread
 			//
 			///////////////////////////////////////////////
+	
+			// zero all forces
+			if(tid<num_nodes*DIM){
+				forces[tid] = 0.0;
+			}
 
 			// Assign threads to edges
 			pair = tid * 2;
@@ -76,7 +81,7 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 				y1 = R[n1*DIM + 1];
 				x2 = R[n2*DIM];
 				y2 = R[n2*DIM + 1];
-
+				
 				// Calculate distance, unit vector and force
 				// Shared memory is per block. If num_edges*DIM is too large each block
 				// can be held responsible for separate pairs and then atomic adds can 
@@ -101,11 +106,6 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 				// calculate force
 				force = force_wlc_cuda(dist, L);
 
-				// zero all forces
-				if(tid<num_nodes*DIM){
-					forces[tid] = 0.0;
-				}
-
 				//required before next step
 				__syncthreads();
 
@@ -115,7 +115,7 @@ __global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float
 
 				atomicAdd(&forces[n2], force*unitvector[0]);
 				atomicAdd(&forces[n2+1], force*unitvector[1]);
-
+				
 				__syncthreads();
 			}
 
