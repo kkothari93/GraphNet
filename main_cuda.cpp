@@ -6,6 +6,7 @@
 #include <cmath>
 #include <time.h>
 #include <vector>
+#include <cstring>
 #include <algorithm>
 #include <ctime>
 #include <chrono>
@@ -36,7 +37,6 @@
 #define T 300 								// Temperature
 #define ae 0.1 								// Strength of bond - includes activation energy
 #define delxe 0.15 							// parameter for breaking crosslink connection
-#define BLOCK_SIZE 1024
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
@@ -234,29 +234,37 @@ void crack(float* c, float* a, float* R, int n_nodes,
 	cout<<"Edges removed : "<<edges_removed<<endl;
 }
 
-void get_moving_nodes(int* moving_nodes, int n_moving, \
+void get_moving_nodes(int* moving_nodes, int& n_moving, \
 	int* tnodes, int n_tside, int* bnodes, int n_bside,\
 	int n_nodes){
 	int c = 0, nt,nb;
 	bool found = false;
 	for(int i=0; i<n_nodes; i++){
+		found =false;
 		for(nt= 0; nt< n_tside; nt++){
-			if(tnodes[nt]==i){found=true; break;}
+			if(tnodes[nt]==i){
+				found=true; 
+				break;
+			}
 		}
 		for(nb= 0; nb< n_bside; nb++){
-			if(bnodes[nb]==i){found=true; break;}
+			if(bnodes[nb]==i){
+				found=true;
+				break;
+			}
 		}
 		if(!found){
 			moving_nodes[c] = i;
 			c++;
 		}
 	}
+	cout<<"We have "<<c<<" moving nodes!\n";
 
 }
 int main(){
 
 	int n_nodes, n_elems;
-	int steps = 1000;
+	int steps = 100;
 
 	string fname = "./template2d.msh";
 	//Check if file exists
@@ -297,6 +305,8 @@ int main(){
 	bsideNodes = (int* )malloc(max_nodes_on_a_side*si);
 	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
 	pull_forces = (float* )malloc(steps*DIM*sf);
+
+	std::memset(pull_forces, 0.0, steps*DIM*sf);
 
 	// 	initialise n_xside for side nodes
 	int n_rside = 0;
@@ -381,6 +391,7 @@ int main(){
 	free(pull_forces);
 	free(bsideNodes); free(tsideNodes);
 	free(lsideNodes); free(rsideNodes);
+	free(moving_nodes);
 	free(PBC);
 	free(R); free(edges);
 	free(L); free(damage);	

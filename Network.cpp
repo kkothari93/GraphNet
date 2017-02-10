@@ -967,7 +967,6 @@ int main() {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
 	Network test_network(path);
-	cout<<"the size of network is "<<sizeof(*test_network)<<endl;
 
 
 	test_network.get_weight();

@@ -1,5 +1,5 @@
 #define SPCL_NUM -1.0
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 512
 
 
 struct hostvars{
