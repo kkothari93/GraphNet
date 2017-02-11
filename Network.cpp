@@ -985,7 +985,7 @@ int main() {
 
 	clock_t t = clock();
 	cout<<"\n Will run for "<<STEPS<<":\n";
-	for(int i = 0; i<0*STEPS; i++ ){
+	for(int i = 0; i<STEPS; i++ ){
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
@@ -997,7 +997,7 @@ int main() {
 		}
 	}
 
-	string fname = "forces_disorder_0.05_cracked.txt";
+	string fname = "forces.txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);
