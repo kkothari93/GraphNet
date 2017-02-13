@@ -897,7 +897,7 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800, int lo, int hi, bool& BROKEN){
+void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
@@ -988,7 +988,7 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 	}
 }
 
-int main() {
+/**int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
@@ -1022,7 +1022,7 @@ int main() {
 
 	free(plate_forces);
 	return 0;
-}
+}**/
 
 
 

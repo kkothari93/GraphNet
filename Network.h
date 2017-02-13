@@ -60,11 +60,15 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	bool get_forces(bool, int lo, int hi);
+	bool get_forces(bool, int lo = 0, int hi = 0);
 	void move_top_plate();
 	void get_plate_forces(float*, int);
-	void optimize(float, float, int, int lo, int hi, bool BROKEN);
+	void optimize(bool& BROKEN, int lo, int hi, float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
+	int get_current_edges();
+	bool get_stats();
+	float get_weight();
+	void set_weight(float weight);
 
 //private:
 

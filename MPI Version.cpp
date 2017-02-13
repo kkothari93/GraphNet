@@ -13,34 +13,34 @@
 #include <chrono>
 
 
-#include "gnuplot_i.hpp"
+//#include "gnuplot_i.hpp"
 #include "input.h"
 #include "Network.h"
 
 
 
-#define DIM 2								// Number of dimensions
-#define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 10.0						// Simulation time
-#define TOL 1e-6							// Tolerance
-#define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-#define L_MEAN 120.0f						// Average for contour length
-#define L_STD 4.0f							// Std. deviation for contour lengths
-#define Z_MAX 10							// Max coordination number
-#define MAXBOUND 500.0f
-#define CRACKED true
+// #define DIM 2								// Number of dimensions
+// #define TIME_STEP 1e-4						// Time step
+// #define SIM_TIME 10.0						// Simulation time
+// #define TOL 1e-6							// Tolerance
+// #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
+// #define L_MEAN 120.0f						// Average for contour length
+// #define L_STD 4.0f							// Std. deviation for contour lengths
+// #define Z_MAX 10							// Max coordination number
+// #define MAXBOUND 500.0f
+// #define CRACKED true
 
-// Define constants
-#define kB 1.38064852e-5					// Boltzmann constant
-#define b 0.1								// Persistence length
-#define T 300 								// Temperature
-#define ae 0.1 								// Strength of bond - includes activation energy
-#define delxe 0.15 							// parameter for breaking crosslink connection
+// // Define constants
+// #define kB 1.38064852e-5					// Boltzmann constant
+// #define b 0.1								// Persistence length
+// #define T 300 								// Temperature
+// #define ae 0.1 								// Strength of bond - includes activation energy
+// #define delxe 0.15 							// parameter for breaking crosslink connection
 
-static double vel[DIM] = {0.0, 100.0};
+//static double vel[DIM] = {0.0, 100.0};
 
 
-int main() {
+int main(int argc, char* argv[]) {
 
 	
 	MPI_Init(NULL, NULL);
@@ -56,7 +56,8 @@ int main() {
   	
 
   	Network * main_network = NULL;
-  	String fname = "";
+  	string fname = "";
+  	fname = argv[1];
   	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
@@ -65,12 +66,13 @@ int main() {
 	int hi = lo + chunk_size - 1;
 
 	//uniform L and PBC across all processors
-	MPI_Bcast(main_network->L, main_network->get_n_elems(), MPI_FLOAT, 0, MPI_COMM_WORLD);
-	MPI_Bcast(main_network->PBC, main_network->get_n_elems(), MPI_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	float * recv_buffer = new float[main_network->n_nodes * 2 * world_size]; //buffer to gather the R from all nodes
+	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
+	float * recv_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
 	bool * broken_buffer = new bool[world_size];
-	int * edges_buffer = new int[main_network->n_elems * 2 * world_size];
+	int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
 	int iter = 0; // needed to write forces later
+	clock_t t = clock(); 
 	for(iter = 0; iter<STEPS; iter++){
 		if((iter+1)%1000 == 0){ // +1 required to have values in p_x, p_y
 			cout<<(iter+1)<<endl; 
@@ -79,29 +81,29 @@ int main() {
 		}
 		bool BROKEN = false;
 		//TODO: add broken flag
-		main_network->optimize(lo, hi, broken);
+		main_network->optimize(BROKEN, lo, hi);
 		//TODO: use Network::get_plate_forces() on root proc
 
 		if (world_rank == 0) {
 			//move_top_nodes(R, tsideNodes, n_tside);
 			main_network->move_top_plate();
-			main_network->get_plate_forces(/** not sure what to put here **/, iter);
+			main_network->get_plate_forces(main_network->forces/** TODO: not sure what to put here **/, iter);
 		}
 		
 		//TODO: check the size of array parameter
-		MPI_Gather(main_network->R, main_network->n_nodes * 2, MPI_FLOAT, recv_buffer, main_network->n_nodes * 2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, recv_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		if (world_rank == 0) {
-			for (int i = 0; i < main_network->n_nodes * 2; i++) {
-				int proc_to_copy_from = (R[i]/chunk_size);
-				R[i] = recv_buffer[main_network->n_nodes * 2 * proc_to_copy_from + i];
+			for (int i = 0; i < main_network->n_nodes * DIM; i++) {
+				int proc_to_copy_from = (main_network->R[i]/chunk_size);
+				main_network->R[i] = recv_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
 			}
 		}
 		
-		MPI_Bcast(main_network->R, main_network->n_nodes * 2, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 
 		//checking if edges need to be resynced
-		MPI_Allgather(&BROKEN, 1, MPI_BOOL, broken_buffer, 1, MPI_BOOL, MPI_COMM_WORLD);
+		MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
 		
 		bool need_edges_resyncing = false;
 		for (int i = 0; i < world_size; i++) {
@@ -111,15 +113,15 @@ int main() {
 			}
 		}
 		if (need_edges_resyncing) {
-			MPI_Gather(main_network->edges, main_network->n_elems * 2, MPI_INT, edges_buffer, main_network->n_elems * 2, MPI_INT, 0, MPI_COMM_WORLD);
+			MPI_Gather(main_network->edges, main_network->n_elems * DIM, MPI_INT, edges_buffer, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
 			if (world_rank == 0) {
-				for (int i = 0; i < main_network->n_elems * 2; i += 2) {
+				for (int i = 0; i < main_network->n_elems * DIM; i += DIM) {
 					int proc_to_copy_from = i / chunk_size;
-					main_network->edges[i] = edges_buffer[main_network->n_elems * 2 * proc_to_copy_from + i];
-					main_network->edges[i+1] = edges_buffer[main_network->n_elems * 2 * proc_to_copy_from + i + 1];
+					main_network->edges[i] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i];
+					main_network->edges[i+1] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i + 1];
 				}
 			}
-			MPI_Bcast(main_network->edges, main_network->n_elems * 2, MPI_INT, 0, MPI_COMM_WORLD);
+			MPI_Bcast(main_network->edges, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
 			
 		}
 
