@@ -16,7 +16,9 @@
 //#include "gnuplot_i.hpp"
 #include "input.h"
 #include "Network.h"
-
+//compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
+//execute using mpirun ./a.out
+//makefile not working
 
 
 // #define DIM 2								// Number of dimensions
