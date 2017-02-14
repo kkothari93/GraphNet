@@ -17,7 +17,7 @@
 #include "input.h"
 #include "Network.h"
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
-//execute using mpirun ./a.out
+//execute using mpirun ./a.out <filename>
 //makefile not working
 
 
@@ -45,12 +45,13 @@
 int main(int argc, char* argv[]) {
 
 	
+	
 	MPI_Init(NULL, NULL);
 
   	// Get the number of processes
   	int world_size;
   	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
+  	//cout << world_size << endl;
   	// Get the rank of the process
   	int world_rank;
   	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
@@ -63,6 +64,16 @@ int main(int argc, char* argv[]) {
   	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
+
+	float* plate_forces;
+
+	main_network->get_weight();
+	bool should_stop = main_network->get_stats();
+
+	if(should_stop){return 0;}
+
+	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 	
 	int lo = world_rank * chunk_size;
 	int hi = lo + chunk_size - 1;
@@ -70,6 +81,7 @@ int main(int argc, char* argv[]) {
 	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
+
 	float * recv_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
 	bool * broken_buffer = new bool[world_size];
 	int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
@@ -83,17 +95,19 @@ int main(int argc, char* argv[]) {
 		}
 		bool BROKEN = false;
 		//TODO: add broken flag
+
 		main_network->optimize(BROKEN, lo, hi);
 		//TODO: use Network::get_plate_forces() on root proc
 
 		if (world_rank == 0) {
 			//move_top_nodes(R, tsideNodes, n_tside);
 			main_network->move_top_plate();
-			main_network->get_plate_forces(main_network->forces/** TODO: not sure what to put here **/, iter);
+			main_network->get_plate_forces(plate_forces, iter);
 		}
 		
 		//TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, recv_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		
 		if (world_rank == 0) {
 			for (int i = 0; i < main_network->n_nodes * DIM; i++) {
 				int proc_to_copy_from = (main_network->R[i]/chunk_size);
@@ -103,10 +117,9 @@ int main(int argc, char* argv[]) {
 		
 		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-
 		//checking if edges need to be resynced
 		MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
-		
+		cout << __LINE__ << endl;
 		bool need_edges_resyncing = false;
 		for (int i = 0; i < world_size; i++) {
 			need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
