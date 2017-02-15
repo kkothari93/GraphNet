@@ -27,3 +27,5 @@ __device__ float kfe_cuda(float);
 __device__ float force_wlc_cuda(float, float);
 
 void pull_CUDA(hostvars*, int);
+
+void sanity_check(hostvars*);

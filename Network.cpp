@@ -935,31 +935,34 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 
 	ofstream logger;
 	std::time_t result = std::time(nullptr);
-
-
-	cout<<"1D pulling of a 2D gel"<<endl;
-	cout<<"File created at "<<std::asctime(std::localtime(&result));
-	cout<<endl;
-
-	cout<<"Sim dimension : "<<DIM<<endl;
-	cout<<"Simulation time : "<<SIM_TIME<<endl;
-	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
-	cout<<endl;
-
-	cout<<"Disorder characteristics : "<<endl;
-	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
-	cout<<" -- L_STD : "<<L_STD<<endl;
-	cout<<endl;
-	
-	cout<<"Cracked? : "<<CRACKED<<endl;
-
 	logger.open(fname, ios::trunc|ios_base::out);
+
+
+	logger<<"1D pulling of a 2D gel"<<"\n";
+	logger<<"File created at "<<std::asctime(std::localtime(&result));
+	logger<<"\n";
+
+	logger<<"Sim dimension : "<<DIM<<"\n";
+	logger<<"Simulation time : "<<SIM_TIME<<"\n";
+	logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
+	logger<<"\n";
+
+	logger<<"Disorder characteristics : "<<"\n";
+	logger<<" -- L_MEAN : "<<L_MEAN<<"\n";
+	logger<<" -- L_STD : "<<L_STD<<"\n";
+	logger<<"\n";
+	
+	logger<<"Cracked? : "<<CRACKED<<"\n";
+
+    // logger.open(fname, ios::trunc|ios_base::out);
 	for(int i =0; i < rows; i++){
 		for(int j = 0; j< cols; j++){
 			logger<<arr[i*cols + j]<<"\t";
 		}
 		logger<<"\n";
 	}
+    logger.close();
+	cout<<"Stored everything in "<<fname<<"!\n";
 }
 
 int main() {
@@ -997,7 +1000,7 @@ int main() {
 		}
 	}
 
-	string fname = "forces.txt";
+	string fname = "forces_100.txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);

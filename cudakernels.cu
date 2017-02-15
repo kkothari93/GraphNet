@@ -31,7 +31,7 @@ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=t
 }
 
 __device__ float kfe_cuda(float force){
-	return expf(force*delxe/kB/T)*TIME_STEP;
+	return ae*expf(force*delxe/kB/T)*TIME_STEP;
 }
 
 __device__ float force_wlc_cuda(float x, float L){
@@ -40,173 +40,208 @@ __device__ float force_wlc_cuda(float x, float L){
 	else { return 999999.0; }
 }
 
-__global__ void optimize_cuda(float*R, int* edges, float* damage_integral, float* forces, \
+__global__ void optimize_cuda(float* R, int* edges, float* damage_integral, float* forces, \
 	const float* chain_len, const int num_nodes, const int num_edges, \
 	const bool* PBC_STATUS, const float* PBC_vector, \
 	const int* tnodes, int n_tnodes, const int* moving_nodes, int n_moving, \
 	float* plate_force, int n_steps,\
 	float eta = 0.01, float alpha = 0.9, int max_iter_opt = 1000){
 
-	// Get indices
-	int tx = threadIdx.x; 
-	int bx = blockIdx.x;
-	int tid = tx + bx*BLOCK_SIZE;
-	
+	int tid = threadIdx.x + blockIdx.x*BLOCK_SIZE;
+	float pbc_v[2] = {PBC_vector[0], PBC_vector[1]}; 
+	float rms_history[2];
+	float delR[2];
+	float grad[2];
+
+	int pair, n1, n2, n_t;
+	float L, x1, x2, y1, y2, dist, force;
+	float unitvector[DIM];
+	bool pbc;
+
+	//if(tid==1){printf}
 
 	if(tid<num_edges){
 		damage_integral[tid] = 0.0;
-		float rms_history[2];
-		float delR[2];
-		float grad[2];
-
-		int pair, edge_num, n1, n2, n_t;
-		float L, x1, x2, y1, y2, dist, force, diss_energy, top_force_x, top_force_y;
-		float unitvector[DIM];
+		pbc = PBC_STATUS[tid];
 
 		// Assign threads to edges
 		pair = tid * 2;
-		edge_num = tid; 
-		L = chain_len[edge_num];
+		L = chain_len[tid];
 
 		// read the nodes that the thread has been assigned
 		n1 = edges[pair];
 		n2 = edges[pair+1];
+	}
+	__syncthreads();
 
-		for(int iter = 0; iter<n_steps; iter++){
-			
-			// reset grads for next iteration
-			rms_history[0] = 0.0;
-			rms_history[1] = 0.0;
-			delR[0] = 0.0;
-			delR[1] = 0.0;
-			grad[0] = 0.0;
-			grad[1] = 0.0;
-
-			for(int step = 0; step < max_iter_opt; step++){
-				///////////////////////////////////////////////
-				// Force calculations
-				// 
-				// Here each edge is assigned one thread
-				//
-				///////////////////////////////////////////////
+	for(int iter = 0; iter<n_steps; iter++){
 		
-				// zero all forces
-				if(tid<num_nodes*DIM){
-					forces[tid] = 0.0;
-				}
+		// reset grads for next iteration
+		rms_history[0] = 0.0;
+		rms_history[1] = 0.0;
+		delR[0] = 0.0;
+		delR[1] = 0.0;
+		grad[0] = 0.0;
+		grad[1] = 0.0;
+
+		for(int step = 0; step < max_iter_opt; step++){
+			///////////////////////////////////////////////
+			// Force calculations
+			// 
+			// Here each edge is assigned one thread
+			//
+			///////////////////////////////////////////////
+	
+			// zero all forces
+			if(tid<num_nodes*DIM){
+				forces[tid] = 0.0;
+			}
+			__syncthreads();
+
+			force = 0.0;
+					
+			if(tid < num_edges){
+			// Check if connection exists 
+			if(n1 != SPCL_NUM && n2 != SPCL_NUM){
+
+				// read the positions of the crosslinkers
+				x1 = R[n1*DIM];
+				y1 = R[n1*DIM + 1];
+				x2 = R[n2*DIM];
+				y2 = R[n2*DIM + 1];
+				//if(step==0 && iter==0){printf("(%f, %f); (%f, %f)\n", x1, y1, x2, y2);}
 				
-				__syncthreads();
-				// Check if connection exists 
-				if(n1!=SPCL_NUM && n2 != SPCL_NUM){
-					
-					// read the positions of the crosslinkers
-					x1 = R[n1*DIM];
-					y1 = R[n1*DIM + 1];
-					x2 = R[n2*DIM];
-					y2 = R[n2*DIM + 1];
-					
-					// Calculate distance, unit vector and force
-					// Shared memory is per block. If num_edges*DIM is too large each block
-					// can be held responsible for separate pairs and then atomic adds can 
-					// be done. Another approach could be to have each thread implement force
-					// calc for one node to avoid atomic adds but that requires each thread to 
-					// run through all edges and figure out which ones to add. That will be order
-					// n whereas atomic adds should be order z extra work
+				// Calculate distance, unit vector and force
+				// Shared memory is per block. If num_edges*DIM is too large each block
+				// can be held responsible for separate pairs and then atomic adds can 
+				// be done. Another approach could be to have each thread implement force
+				// calc for one node to avoid atomic adds but that requires each thread to 
+				// run through all edges and figure out which ones to add. That will be order
+				// n whereas atomic adds should be order z extra work
 
-					// check for PBC;
-					if(PBC_STATUS[edge_num]==true){
-						dist = hypot(x1-x2-PBC_vector[0], y1-y2-PBC_vector[1]);
-					}
-					else{
-						dist = hypot(x1-x2, y1-y2);
-					}
-
+				// check for PBC;
+				if(pbc==true){
+					dist = hypotf(x1-x2-pbc_v[0], y1-y2-pbc_v[1]);
+					// add unitvector 3 for DIM 3. __in future use for loop here
+					unitvector[0] = (x1 - x2 - pbc_v[0])/dist;
+					unitvector[1] = (y1 - y2 - pbc_v[1])/dist;
+				}
+				else{
+					dist = hypotf(x1-x2, y1-y2);
 					// add unitvector 3 for DIM 3. __in future use for loop here
 					unitvector[0] = (x1 - x2)/dist;
 					unitvector[1] = (y1 - y2)/dist;
+				}
+			
+				
+				// calculate force
+				force = force_wlc_cuda(dist, L);
 
-
-					// calculate force
-					force = force_wlc_cuda(dist, L);
-
-					// Break if force too high
-					if(force>=999){
-						printf("Breaking bond between %d and %d at iter %d, step %d\n", n1, n2, iter, step);
-						edges[pair] = SPCL_NUM;
-						edges[pair + 1] = SPCL_NUM;
-						force = 0.0;
-					}
-
+				// Break if force too high
+				if(force==999999){
+					//printf("Breaking bond between %d and %d at iter %d, step %d\n", n1, n2, iter, step);
+					n1 = SPCL_NUM;
+					n2 = SPCL_NUM;
+					edges[pair] = n1;
+					edges[pair + 1] = n2;
+					force = 0.0;
+					damage_integral[tid] = 1.1;
+				}
+				else{
 					// add the forces calculated to the nodes (atomic add)
-					atomicAdd(&forces[n1*DIM], force*unitvector[0]);
-					atomicAdd(&forces[n1*DIM+1], force*unitvector[1]);
+					atomicAdd(&forces[n1*DIM], -1.0*force*unitvector[0]);
+					atomicAdd(&forces[n1*DIM+1], -1.0*force*unitvector[1]);
 
 					atomicAdd(&forces[n2*DIM], force*unitvector[0]);
 					atomicAdd(&forces[n2*DIM+1], force*unitvector[1]);
-					
 				}
-				__syncthreads();
 				
-				/////////////////////////////////////////////////
-				//
-				// Optimization step
-				//
-				/////////////////////////////////////////////////
+			}}
+			__syncthreads();
+			
+			/////////////////////////////////////////////////
+			//
+			// Optimization step
+			//
+			/////////////////////////////////////////////////
 
-				// Assign each thread to nodes*DIM
-				if(tid<n_moving){
-					n_t = moving_nodes[tid];
-					grad[0] = forces[n_t*DIM];
-					grad[1] = forces[n_t*DIM + 1];
+			// Assign each thread to nodes*DIM
+			if(tid<n_moving){
+				n_t = moving_nodes[tid];
+				grad[0] = forces[n_t*DIM];
+				grad[1] = forces[n_t*DIM + 1];
 
-					rms_history[0] = alpha*rms_history[0] + (1-alpha)*grad[0]*grad[0];
-					rms_history[1] = alpha*rms_history[1] + (1-alpha)*grad[1]*grad[1];
+				rms_history[0] = alpha*rms_history[0] + (1-alpha)*grad[0]*grad[0];
+				rms_history[1] = alpha*rms_history[1] + (1-alpha)*grad[1]*grad[1];
 
-					delR[0] = eta/__frsqrt_rn((rms_history[0] + 1.0e-6)) * grad[0];
-					delR[1] = eta/__frsqrt_rn((rms_history[1] + 1.0e-6)) * grad[1];
-					
-					R[n_t*DIM] += delR[0];
-					R[n_t*DIM + 1] += delR[1];
-				}
-				__syncthreads();
-			}
-
-
-			// Check if connection exists 
-			if(n1!=SPCL_NUM && n2 != SPCL_NUM){
-				// Update damage integral
-				diss_energy = kfe_cuda(force)*TIME_STEP;
-				damage_integral[edge_num] += diss_energy;
-
-				// Update edges acc. to damage
-				if(damage_integral[edge_num] > 1.0){
-					edges[pair] = SPCL_NUM;
-					edges[pair + 1] = SPCL_NUM;
-					damage_integral[edge_num] = 1.1;
-				}
-			}
-
-			// update the force in the array
-			if(tid<n_tnodes){
-				n_t = tnodes[tid];
-				top_force_x = forces[DIM*n_t];
-				top_force_y = forces[DIM*n_t + 1];
-				atomicAdd(&plate_force[iter*DIM], top_force_x);
-				atomicAdd(&plate_force[iter*DIM + 1], top_force_y);
-			}
-
-			// move top nodes acc. to velocity
-			if(tid < 2*n_tnodes && tid >= n_tnodes){
-				n_t = tnodes[tid - n_tnodes];
-				R[DIM*n_t] += vel[0]*TIME_STEP;
-				R[DIM*n_t + 1] += vel[1]*TIME_STEP;
+				delR[0] = eta/__frsqrt_rn((rms_history[0] + 1.0e-6)) * grad[0];
+				delR[1] = eta/__frsqrt_rn((rms_history[1] + 1.0e-6)) * grad[1];
+				
+				R[n_t*DIM] += delR[0];
+				//if(fabs(delR[0])>10.0){printf("For node %d we have forces %0.3f\n",n_t, grad[0] );}
+				R[n_t*DIM + 1] += delR[1];
+				//if(fabs(delR[1])>10.0){printf("For node %d we have forces %0.3f\n",n_t, grad[1] );}
 			}
 			__syncthreads();
-		
 		}
+
+
+		// Check if connection exists 
+		if(tid<num_edges){
+			if(damage_integral[tid]<1.0){
+				// Update damage integral
+				damage_integral[tid] += kfe_cuda(force)*TIME_STEP;
+			}
+			// Update edges acc. to damage
+			if(damage_integral[tid] > 1.0){
+				damage_integral[tid] = 1.1;
+				n1 = SPCL_NUM;
+				n2 = SPCL_NUM;
+				edges[pair] = SPCL_NUM;
+				edges[pair + 1] = SPCL_NUM;
+			}
+		}
+
+		// update the force in the array
+		if(tid<n_tnodes){
+			n_t = tnodes[tid];
+			atomicAdd(&plate_force[iter*DIM], forces[DIM*n_t]);
+			atomicAdd(&plate_force[iter*DIM + 1], forces[DIM*n_t + 1]);
+		}
+
+		// move top nodes acc. to velocity
+		if(tid < 2*n_tnodes && tid >= n_tnodes){
+			n_t = tnodes[tid - n_tnodes];
+			R[DIM*n_t] += vel[0]*TIME_STEP;
+			R[DIM*n_t + 1] += vel[1]*TIME_STEP;
+		}
+		__syncthreads();
+	
 	}
 }
 
+
+void sanity_check(hostvars* vars){
+	int n1, n2,c=0;
+	float dist, x1, x2, y1, y2, L;
+	float pbc_v[2] = {vars->PBC_vector[0], vars->PBC_vector[1]};
+	for(int i=0; i<vars->n_elems; i++){
+		n1 = vars->edges[2*i];
+		n2 = vars->edges[2*i+1];
+		x1 = vars->R[n1*DIM];
+		y1 = vars->R[n1*DIM + 1];
+		x2 = vars->R[n2*DIM];
+		y2 = vars->R[n2*DIM + 1];
+		if(vars->PBC[i] == true){x2 += pbc_v[0]; y2 += pbc_v[1]; }
+		dist = sqrtf((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2));
+		L = vars->L[i];
+		if (dist>=L){
+			printf("(%0.2f, %0.2f); (%0.2f, %0.2f) and L = %0.2f\n", x1, y1, x2, y2, L);
+			c += 1;
+		}
+		}
+	printf("%d of %d elements make no sense!", c, vars->n_elems);
+}
 
 void pull_CUDA(hostvars* vars, int n_steps){
 	// Pass all host variables in a struct
@@ -225,6 +260,8 @@ void pull_CUDA(hostvars* vars, int n_steps){
 	int n_tside = vars->n_tnodes;
 	int n_moving = vars->n_moving;
 	
+	//sanity_check(vars);
+
 	// Check if the transfers are ok
 	printf("n_nodes: %d \t", n_nodes);
 	printf("n_elems: %d \t", n_elems);
@@ -236,7 +273,7 @@ void pull_CUDA(hostvars* vars, int n_steps){
 	cudaMalloc((void**)&forces_d, n_nodes*DIM*sizeof(float));
 	cudaMalloc((void**)&edges_d, 2*n_elems*sizeof(int));
 	cudaMalloc((void**)&tsideNodes_d, n_tside*sizeof(int));
-	cudaMalloc((void**)&moving_nodes_d, n_moving*sizeof(float));
+	cudaMalloc((void**)&moving_nodes_d, n_moving*sizeof(int));
 	cudaMalloc((void**)&PBC_d, n_elems*sizeof(bool));
 	cudaMalloc((void**)&PBC_vector_d, DIM*sizeof(float));
 	cudaMalloc((void**)&L_d, n_elems*sizeof(float));
@@ -289,7 +326,7 @@ void pull_CUDA(hostvars* vars, int n_steps){
 	cudaMemcpy(vars->forces, forces_d,  n_nodes*DIM*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(vars->damage, damage_d,  n_elems*sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(vars->pull_forces, pull_forces_d,  n_steps*DIM*sizeof(float), cudaMemcpyDeviceToHost);
-	cudaMemcpy(vars->edges, edges_d,  2*n_elems*sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vars->edges, edges_d,  2*n_elems*sizeof(int), cudaMemcpyDeviceToHost);
 
 	n_e = 0;
 	for(int i=0; i< n_elems; i++){
@@ -299,13 +336,14 @@ void pull_CUDA(hostvars* vars, int n_steps){
 	}
 	printf("We have %d edges\n",n_e);
 
-	for(int i=0; i<n_nodes; i++){
-		printf("R[%d]\t",i);
-		for(int d=0; d<DIM; d++){
-			printf("%0.3f\t",vars->R[i*DIM + d]);
-		}
-		printf("\n");
-	}
+	// for(int i=0; i<n_elems; i++){
+	// 	if (vars->damage[i]>=1.0){
+	// 		printf("damage[%d]\t%0.5f\n",i, vars->damage[i]);}
+	// 	// for(int d=0; d<DIM; d++){
+	// 	// 	printf("%0.3f\t",vars->R[i*DIM + d]);
+	// 	// }
+	// 	// printf("\n");
+	// }
 
 	// Free up global memory
 	cudaFree(R_d);

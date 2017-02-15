@@ -264,7 +264,7 @@ void get_moving_nodes(int* moving_nodes, int& n_moving, \
 int main(){
 
 	int n_nodes, n_elems;
-	int steps = 2;
+	int steps = 20;
 
 	string fname = "./template2d.msh";
 	//Check if file exists
@@ -366,12 +366,18 @@ int main(){
 	vars.n_tnodes = n_tside; 
 	vars.n_moving = n_moving;
 
+	sanity_check(&vars);
+
+
+
 	// gnuplots
-	// Gnuplot gforces("lines lw 2");
+	//Gnuplot gforces("lines lw 2");
 	// Gnuplot gnetwork;
 
 	// plot_network(gnetwork, R, edges, PBC, \
 	// 			n_nodes, n_elems, 0);
+	// char p;
+	// cin>>p;
 	// Track time for 1000 iterations
 	clock_t t = clock(); 
 
