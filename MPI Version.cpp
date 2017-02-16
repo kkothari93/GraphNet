@@ -66,12 +66,12 @@ int main(int argc, char* argv[]) {
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
 
 	float* plate_forces;
-
+    if(world_rank==0){
 	main_network->get_weight();
 	bool should_stop = main_network->get_stats();
 
 	if(should_stop){return 0;}
-
+    }
 	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 	
@@ -88,10 +88,13 @@ int main(int argc, char* argv[]) {
 	int iter = 0; // needed to write forces later
 	clock_t t = clock(); 
 	for(iter = 0; iter<STEPS; iter++){
-		if((iter+1)%1000 == 0){ // +1 required to have values in p_x, p_y
+		if((iter+1)%100 == 0){ // +1 required to have values in p_x, p_y
 			cout<<(iter+1)<<endl; 
 			cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
+			if(world_rank==0){
+				main_network->get_stats();
+			}
 		}
 		bool BROKEN = false;
 		//TODO: add broken flag
@@ -119,7 +122,7 @@ int main(int argc, char* argv[]) {
 
 		//checking if edges need to be resynced
 		MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
-		cout << __LINE__ << endl;
+		//cout << __LINE__ << endl;
 		bool need_edges_resyncing = false;
 		for (int i = 0; i < world_size; i++) {
 			need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
@@ -142,9 +145,8 @@ int main(int argc, char* argv[]) {
 
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
-
+	cout<<__LINE__<<endl;
 	MPI_Finalize();
-
 }
 
 

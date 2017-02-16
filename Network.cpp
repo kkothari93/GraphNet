@@ -645,7 +645,7 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
-		if ((node1 <= lo || node1 >= hi || node2 <= lo || node2 >= hi)) {
+		if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
 			continue;
 		}
 
@@ -907,6 +907,7 @@ void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
+				if(node>=lo && node<=hi){
 				#pragma unroll
 				for(d = 0; d<DIM; d++){
 					g = forces[DIM*node+d];
@@ -914,7 +915,7 @@ void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int
 					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
 					R[node*DIM + d] += delR[id*DIM + d];
 				}		
-			}
+			}}
 		}
 		else{
 			break;
