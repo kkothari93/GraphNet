@@ -45,7 +45,7 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 	const bool* PBC_STATUS, const float* PBC_vector, \
 	const int* tnodes, int n_tnodes, const int* moving_nodes, int n_moving, \
 	float* plate_force, int n_steps,\
-	float eta = 0.01, float alpha = 0.9, int max_iter_opt = 1000){
+	float eta = 0.1, float alpha = 0.9, int max_iter_opt = 1000){
 
 	int tid = threadIdx.x + blockIdx.x*BLOCK_SIZE;
 	float pbc_v[2] = {PBC_vector[0], PBC_vector[1]}; 
@@ -57,8 +57,6 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 	float L, x1, x2, y1, y2, dist, force;
 	float unitvector[DIM];
 	bool pbc;
-
-	//if(tid==1){printf}
 
 	if(tid<num_edges){
 		damage_integral[tid] = 0.0;
@@ -132,11 +130,11 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 					unitvector[0] = (x1 - x2)/dist;
 					unitvector[1] = (y1 - y2)/dist;
 				}
-			
+				if(dist/L > 1){printf("step: %d\tratio: %0.3f\n", step, dist/L);}
 				
 				// calculate force
 				force = force_wlc_cuda(dist, L);
-
+				
 				// Break if force too high
 				if(force==999999){
 					//printf("Breaking bond between %d and %d at iter %d, step %d\n", n1, n2, iter, step);
@@ -149,9 +147,8 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 				}
 				else{
 					// add the forces calculated to the nodes (atomic add)
-					atomicAdd(&forces[n1*DIM], -1.0*force*unitvector[0]);
-					atomicAdd(&forces[n1*DIM+1], -1.0*force*unitvector[1]);
-
+					atomicAdd(&forces[n1*DIM], -force*unitvector[0]);
+					atomicAdd(&forces[n1*DIM+1], -force*unitvector[1]);
 					atomicAdd(&forces[n2*DIM], force*unitvector[0]);
 					atomicAdd(&forces[n2*DIM+1], force*unitvector[1]);
 				}
@@ -178,9 +175,7 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 				delR[1] = eta/__frsqrt_rn((rms_history[1] + 1.0e-6)) * grad[1];
 				
 				R[n_t*DIM] += delR[0];
-				//if(fabs(delR[0])>10.0){printf("For node %d we have forces %0.3f\n",n_t, grad[0] );}
 				R[n_t*DIM + 1] += delR[1];
-				//if(fabs(delR[1])>10.0){printf("For node %d we have forces %0.3f\n",n_t, grad[1] );}
 			}
 			__syncthreads();
 		}
@@ -193,7 +188,7 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 				damage_integral[tid] += kfe_cuda(force)*TIME_STEP;
 			}
 			// Update edges acc. to damage
-			if(damage_integral[tid] > 1.0){
+			if(damage_integral[tid] >= 1.0){
 				damage_integral[tid] = 1.1;
 				n1 = SPCL_NUM;
 				n2 = SPCL_NUM;
@@ -223,6 +218,8 @@ __global__ void optimize_cuda(float* R, int* edges, float* damage_integral, floa
 
 void sanity_check(hostvars* vars){
 	int n1, n2,c=0;
+	int n_t;
+	int n_moving = vars->n_moving;
 	float dist, x1, x2, y1, y2, L;
 	float pbc_v[2] = {vars->PBC_vector[0], vars->PBC_vector[1]};
 	for(int i=0; i<vars->n_elems; i++){
@@ -240,7 +237,12 @@ void sanity_check(hostvars* vars){
 			c += 1;
 		}
 		}
-	printf("%d of %d elements make no sense!", c, vars->n_elems);
+	for(int k=0;k<n_moving;k++){
+		n_t = vars->moving_nodes[k];
+	}
+	printf("%d moving nodes were accessed!\n",n_moving);
+		
+	printf("%d of %d elements make no sense!\n", c, vars->n_elems);
 }
 
 void pull_CUDA(hostvars* vars, int n_steps){

@@ -264,7 +264,7 @@ void get_moving_nodes(int* moving_nodes, int& n_moving, \
 int main(){
 
 	int n_nodes, n_elems;
-	int steps = 20;
+	int steps = 10;
 
 	string fname = "./template2d.msh";
 	//Check if file exists
