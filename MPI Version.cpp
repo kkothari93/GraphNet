@@ -66,14 +66,18 @@ int main(int argc, char* argv[]) {
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
 	
 	float* plate_forces;
-    if(world_rank==0){
+    
 	main_network->get_weight();
 	bool should_stop = main_network->get_stats();
-
-	if(should_stop){return 0;}
-    }
-	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
-	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
+	if(should_stop) {
+		return 0;
+	}
+    
+	if (world_rank == 0) {
+		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+		memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
+	}
+	
 	
 	int lo = world_rank * chunk_size;
 	int hi = lo + chunk_size - 1;
@@ -146,6 +150,13 @@ int main(int argc, char* argv[]) {
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 	cout<<__LINE__<<endl;
+
+	if (world_rank == 0) {
+		string file_name = "forcesMPI.txt";
+		write_to_file<float>(file_name, plate_forces, STEPS, DIM);
+	}
+
+
 	MPI_Finalize();
 }
 

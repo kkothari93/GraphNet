@@ -957,37 +957,37 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 
 
 // }
-template <typename t>
-void write_to_file(string& fname, t* arr, int rows, int cols){
+// template <typename t>
+// void write_to_file(string& fname, t* arr, int rows, int cols){
 
-	ofstream logger;
-	std::time_t result = std::time(nullptr);
+// 	ofstream logger;
+// 	std::time_t result = std::time(nullptr);
 
 
-	cout<<"1D pulling of a 2D gel"<<endl;
-	cout<<"File created at "<<std::asctime(std::localtime(&result));
-	cout<<endl;
+// 	cout<<"1D pulling of a 2D gel"<<endl;
+// 	cout<<"File created at "<<std::asctime(std::localtime(&result));
+// 	cout<<endl;
 
-	cout<<"Sim dimension : "<<DIM<<endl;
-	cout<<"Simulation time : "<<SIM_TIME<<endl;
-	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
-	cout<<endl;
+// 	cout<<"Sim dimension : "<<DIM<<endl;
+// 	cout<<"Simulation time : "<<SIM_TIME<<endl;
+// 	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
+// 	cout<<endl;
 
-	cout<<"Disorder characteristics : "<<endl;
-	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
-	cout<<" -- L_STD : "<<L_STD<<endl;
-	cout<<endl;
+// 	cout<<"Disorder characteristics : "<<endl;
+// 	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
+// 	cout<<" -- L_STD : "<<L_STD<<endl;
+// 	cout<<endl;
 	
-	cout<<"Cracked? : "<<CRACKED<<endl;
+// 	cout<<"Cracked? : "<<CRACKED<<endl;
 
-	logger.open(fname, ios::trunc|ios_base::out);
-	for(int i =0; i < rows; i++){
-		for(int j = 0; j< cols; j++){
-			logger<<arr[i*cols + j]<<"\t";
-		}
-		logger<<"\n";
-	}
-}
+// 	logger.open(fname, ios::trunc|ios_base::out);
+// 	for(int i =0; i < rows; i++){
+// 		for(int j = 0; j< cols; j++){
+// 			logger<<arr[i*cols + j]<<"\t";
+// 		}
+// 		logger<<"\n";
+// 	}
+// }
 
 /**int main() {
 
