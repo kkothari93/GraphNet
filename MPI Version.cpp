@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
   	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
-
+	
 	float* plate_forces;
 
 	main_network->get_weight();
