@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
 	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-
+	float * forces_buffer = new float[main_network->n_nodes * DIM * world_size];
 	float * recv_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
 	bool * broken_buffer = new bool[world_size];
 	int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
@@ -105,13 +105,12 @@ int main(int argc, char* argv[]) {
 
 		main_network->optimize(BROKEN, lo, hi);
 		//TODO: use Network::get_plate_forces() on root proc
+		MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-		if (world_rank == 0) {
-			//move_top_nodes(R, tsideNodes, n_tside);
-			main_network->move_top_plate();
-			main_network->get_plate_forces(plate_forces, iter);
-		}
-		
+
+		MPI_Barrier(MPI_COMM_WORLD);
+
+
 		//TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, recv_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		
@@ -119,11 +118,17 @@ int main(int argc, char* argv[]) {
 			for (int i = 0; i < main_network->n_nodes * DIM; i++) {
 				int proc_to_copy_from = (main_network->R[i]/chunk_size);
 				main_network->R[i] = recv_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
+				main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
 			}
 		}
 		
 		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
+		MPI_Bcast(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		// if (world_rank == 0) {
+		// 	for (int i = 0; i < main_network->n_nodes; i++) {
+		// 		printf("%d:\t%f\t%f\n",i, main_network->forces[2*i],main_network->forces[2*i+1]);
+		// 	}
+		// }
 		//checking if edges need to be resynced
 		MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
 		//cout << __LINE__ << endl;
@@ -147,6 +152,14 @@ int main(int argc, char* argv[]) {
 			
 		}
 
+		if (world_rank == 0) {
+			//move_top_nodes(R, tsideNodes, n_tside);
+			main_network->move_top_plate();
+			main_network->get_plate_forces(plate_forces, iter);
+			main_network->get_stats();
+			
+		}
+
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 	cout<<__LINE__<<endl;
@@ -154,6 +167,7 @@ int main(int argc, char* argv[]) {
 	if (world_rank == 0) {
 		string file_name = "forcesMPI.txt";
 		write_to_file<float>(file_name, plate_forces, STEPS, DIM);
+		free(plate_forces);
 	}
 
 

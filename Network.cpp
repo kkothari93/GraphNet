@@ -634,7 +634,7 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 	float force;
 
 
-	memset(forces, 0.0, n_nodes*DIM*sizeof(*forces));
+	memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
 
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -705,6 +705,7 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 
 		}
 	}
+	//printf("forces: %f\t%f\n", forces[4], forces[5]);
 	return BROKEN;
 }
 
@@ -904,6 +905,9 @@ void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false, lo, hi);
+		for(int i=lo; i<hi; i++){
+		printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
+	}
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
@@ -930,6 +934,7 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	int node;
 	for(int i=0; i<n_tside; i++){
 		node = tsideNodes[i];
+		//printf("Force from node %d is : %f\t%f\n", node, forces[node*DIM], forces[node*DIM + 1]);
 		plate_forces[iter*DIM+0] += forces[node*DIM + 0];
 		plate_forces[iter*DIM+1] += forces[node*DIM + 1];
 		if(DIM>2){

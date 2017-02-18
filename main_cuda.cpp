@@ -253,7 +253,7 @@ void optimize(float*R, int* edges, float* damage_integral, \
 
 	for(int step = 0; step < max_iter; step++){
 		int id = 0;
-		zero_arr<float>(forces, num_nodes*DIM);
+		memset(forces, 0.0, num_nodes*DIM);
 		get_forces(forces, R, edges, damage_integral, chain_len, \
 		num_edges, PBC_STATUS, PBC_vector, false);
 		// cout<<"Got upto this point\n";
