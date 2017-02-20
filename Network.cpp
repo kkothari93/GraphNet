@@ -622,7 +622,94 @@ void Network::copy(Network const & source) {
 
 }
 
-bool Network::get_forces(bool update_damage = false, int lo, int hi) {
+// bool Network::get_forces(bool update_damage = false, int lo, int hi) {
+
+// 	bool BROKEN = false;
+// 	int node1, node2;
+// 	int j, k, id; // loop variables
+// 	float r1[DIM]; float r2[DIM] ;
+// 	float edge_force[DIM];
+// 	float rhat[DIM];
+// 	float s;
+// 	float force;
+
+
+// 	memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
+
+// 	for (j = 0; j < n_elems; j++){
+// 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
+// 		node1 = edges[j * 2]; 
+// 		node2 = edges[j * 2 + 1];
+		
+// 		// check if pair exists
+// 		if(node1 == -1 || node2 == -1) {
+// 			continue;
+// 		}
+// 		if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
+// 			continue;
+// 		}
+
+// 		// read the positions
+// 		#pragma unroll
+// 		for(k = 0; k<DIM; k++){
+// 			r1[k] = R[node1*DIM + k]; 
+// 			r2[k] = R[node2*DIM + k];
+// 		}
+		
+// 		// check PBC_STATUS
+// 		if (PBC[j]) {
+// 			// add PBC_vector to get new node position
+// 			#pragma unroll
+// 			for (k = 0; k < DIM; k++){
+// 				r2[k] += PBC_vector[k];
+// 			}
+// 			// get force on node1 due to node2
+// 			s = dist(r1, r2);
+// 			unitvector(rhat, r1, r2);
+// 			force = force_wlc(s, L[j]);
+// 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+// 			convert_to_vector(edge_force, force, rhat);
+// 			// subtract back the PBC_vector to get original node position
+// 			// #pragma unroll
+// 			// for (k = 0; k < DIM; k++){
+// 			// 	r2[k] -= PBC_vector[k];
+// 			// }
+// 		}
+// 		else{
+// 			s = dist(r1, r2);
+// 			unitvector(rhat, r1, r2);
+// 			force = force_wlc(s, L[j]);
+// 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+// 			convert_to_vector(edge_force, force, rhat);
+// 		}
+// 		#pragma unroll
+// 		for (k = 0; k < DIM; k++){
+// 			forces[node1*DIM + k] -= edge_force[k];
+// 			forces[node2*DIM + k] += edge_force[k];
+// 		}
+// 		//update damage if needed
+// 		if (update_damage && (node1 < node2)){
+// 			damage[j] += kfe(force)*TIME_STEP;
+// 			//remove edge ... set to special value
+// 			if(damage[j] > 1.0){
+// 				cout<<"Breaking bond between "
+// 				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s = "<<force \
+// 				<<", "<<s<<endl;
+// 				for(int d = 0; d<DIM; d++){
+// 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
+// 				}
+// 				cout<<endl;
+// 				edges[j*2] = -1; edges[j*2+1] = -1;
+// 				BROKEN = true;
+// 			}
+
+// 		}
+// 	}
+// 	//printf("forces: %f\t%f\n", forces[4], forces[5]);
+// 	return BROKEN;
+// }
+
+bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_lo, int y_hi) {
 
 	bool BROKEN = false;
 	int node1, node2;
@@ -634,8 +721,8 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 	float force;
 
 
-	memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
-
+	//memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
+	memset(&forces[DIM*n_elems], 0.0, n_elems*DIM*sizeof(float));
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
 		node1 = edges[j * 2]; 
@@ -645,15 +732,19 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
-		if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
-			continue;
-		}
+		// if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
+		// 	continue;
+		// }
 
 		// read the positions
 		#pragma unroll
 		for(k = 0; k<DIM; k++){
 			r1[k] = R[node1*DIM + k]; 
 			r2[k] = R[node2*DIM + k];
+		}
+
+		if ((r1[0] < x_lo || r1[0] > x_hi || r1[1] < y_lo || r1[1] > y_hi) && (r2[0] < x_lo || r2[0] > x_hi || r2[1] < y_lo || r2[1] > y_hi))  {
+			continue;
 		}
 		
 		// check PBC_STATUS
@@ -688,7 +779,7 @@ bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 			forces[node2*DIM + k] += edge_force[k];
 		}
 		//update damage if needed
-		if (update_damage && (node1 < node2)){
+		if (update_damage) { //&& (node1 < node2)){
 			damage[j] += kfe(force)*TIME_STEP;
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
@@ -898,28 +989,61 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int max_iter){
+// void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int max_iter){
+// 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
+// 	float* delR = new float[n_moving*DIM]();
+// 	float g;
+// 	int id, d, node;
+// 	for(int step = 0; step < max_iter; step++){
+// 		get_forces(false, lo, hi);
+// 		for(int i=lo; i<hi; i++){
+// 		printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
+// 	}
+// 		if(getabsmax(forces,n_nodes*DIM)>TOL){
+// 			for(id = 0; id < n_moving; id++){
+// 				node = moving_nodes[id];
+// 				if(node>=lo && node<=hi){
+// 				#pragma unroll
+// 				for(d = 0; d<DIM; d++){
+// 					g = forces[DIM*node+d];
+// 					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
+// 					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
+// 					R[node*DIM + d] += delR[id*DIM + d];
+// 				}		
+// 			}}
+// 		}
+// 		else{
+// 			break;
+// 		}
+// 	}
+// 	BROKEN = get_forces(true);
+// 	delete[] rms_history;
+// 	delete[] delR;
+// }
+
+void Network::optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
-		get_forces(false, lo, hi);
-		for(int i=lo; i<hi; i++){
-		printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
-	}
+		get_forces(false, x_lo, x_hi, y_lo, y_hi);
+		// for(int i=lo; i<hi; i++){
+		// printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
+	
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
-				if(node>=lo && node<=hi){
-				#pragma unroll
-				for(d = 0; d<DIM; d++){
-					g = forces[DIM*node+d];
-					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
-					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
-					R[node*DIM + d] += delR[id*DIM + d];
+				if (R[node*DIM] >= x_lo && R[node*DIM] <= x_hi && R[node*DIM + 1] >= y_lo && R[node*DIM + 1] <= y_hi) {//if(node>=lo && node<=hi){
+					#pragma unroll
+					for(d = 0; d<DIM; d++){
+						g = forces[DIM*node+d];
+						rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
+						delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
+						R[node*DIM + d] += delR[id*DIM + d];
+					}		
 				}		
-			}}
+			}
 		}
 		else{
 			break;
@@ -929,6 +1053,7 @@ void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int
 	delete[] rms_history;
 	delete[] delR;
 }
+
 
 void Network::get_plate_forces(float* plate_forces, int iter){
 	int node;

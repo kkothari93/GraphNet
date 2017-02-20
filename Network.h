@@ -92,10 +92,12 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	bool get_forces(bool, int lo = 0, int hi = 0);
+	//bool get_forces(bool, int lo = 0, int hi = 0);
+	bool get_forces(bool, int x_lo = 0, int x_hi = 0, int y_lo = 0, int y_hi = 0);
 	void move_top_plate();
 	void get_plate_forces(float*, int);
-	void optimize(bool& BROKEN, int lo, int hi, float eta = 0.1, float alpha = 0.9, int max_iter = 800);
+	//void optimize(bool& BROKEN, int lo, int hi, float eta = 0.1, float alpha = 0.9, int max_iter = 800);
+	void optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
 	int get_current_edges();
 	bool get_stats();
