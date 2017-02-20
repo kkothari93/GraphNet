@@ -44,7 +44,7 @@ inline int get_num_vertices(int elem_type){
 	switch(elem_type){
 		//case 1: return 2;
 		case 2: return 3;
-		//case 3: return 4;
+		case 3: return 4;
 		//case 4: return 4;
 		//case 5: return 8;
 		//case 7: return 5;
@@ -69,6 +69,7 @@ inline float getnorm(const float* vec, const int dim = DIM){
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges){
 	int* local_nodes = new int[n_vertices];
 	int garbage[3];
+	
 	input>>garbage[0]>>garbage[1]>>garbage[2];
 	for(int n = 0; n<n_vertices; n++){
 		input>>local_nodes[n];
@@ -82,9 +83,21 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 		edges[edge_counter*2+3] = local_nodes[2] - 1 ;
 		edges[edge_counter*2+4] = local_nodes[1] - 1 ;
 		edges[edge_counter*2+5] = local_nodes[2] - 1 ;
-		edge_counter += 3; 
+		edge_counter += 3;
+		break;
+		case 3:
+		// [0,1],[0,3],[1,2],[2,3]
+		edges[edge_counter*2] = local_nodes[0] -1 ;
+		edges[edge_counter*2+1] = local_nodes[1] - 1 ;
+		edges[edge_counter*2+2] = local_nodes[0] - 1 ;
+		edges[edge_counter*2+3] = local_nodes[3] - 1 ;
+		edges[edge_counter*2+4] = local_nodes[1] - 1 ;
+		edges[edge_counter*2+5] = local_nodes[2] - 1 ;
+		edges[edge_counter*2+6] = local_nodes[2] - 1 ;
+		edges[edge_counter*2+7] = local_nodes[3] - 1 ;
+		edge_counter += 4;
+		break;	 
 		//TODO: write mapping code
-
 	}
 	delete[] local_nodes;
 }
@@ -93,6 +106,10 @@ void mapping(int& edge_counter, int elem_type){
 	switch(elem_type){
 		case 2:
 			edge_counter += 3;
+			break;
+		case 3:
+			edge_counter += 4;
+			break;
 		//TODO: add other mappings
 	}
 
@@ -132,6 +149,7 @@ void read_n(int& n_nodes, int& n_elems, string& fname){
 				in_pos>>elem_type;
 				//cout<<"element type is "<<elem_type<<endl;
 				num_vertices = get_num_vertices(elem_type);
+				if (num_vertices > 3){cout<<"Found elem_type 3 at line "<<i+1<<endl;}
 				if(num_vertices>0){
 					mapping(n_elems, elem_type);
 				}
@@ -713,7 +731,7 @@ void Network::make_edge_connections(float dely_allowed) {
 			if (fabs(R[lnode*DIM + 1] - R[rnode*DIM + 1]) < dely_allowed){
 				edges[n_elems*2] = rnode;
 				edges[n_elems*2 + 1] = lnode;
-				cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
+				//cout<<"Connected node "<<lnode<<" and "<<rnode<<"\n";
 				L[n_elems] = generator(seed);
 				damage[n_elems] = 0.0;
 				PBC[n_elems] = true;
@@ -868,7 +886,15 @@ float Network::get_weight(){
 }
 
 void Network::set_weight(float weight){
-// TODO
+	float curr_weight = get_weight();
+	float alpha = weight/curr_weight;
+	for(int i = 0; i < n_elems; i++){
+		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
+			L[i] *= alpha;
+		}
+	}
+	cout<<"\n Network weight reset to "<<weight<<"\n";
+	cout<<"Average L now is : "<<weight/n_elems<<"\n";
 }
 
 void Network::move_top_plate(){
@@ -970,9 +996,10 @@ int main() {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d.msh";
 	Network test_network(path);
+	float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
 
-
-	test_network.get_weight();
+	float weight = test_network.get_weight();
+	if (weight<weight_goal){test_network.set_weight(weight_goal);}
 	bool should_stop = test_network.get_stats();
 
 
@@ -1000,7 +1027,7 @@ int main() {
 		}
 	}
 
-	string fname = "forces_100.txt";
+	string fname = "forces_disorder_" + std::to_string(L_STD/L_MEAN) + ".txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);
