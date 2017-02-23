@@ -130,6 +130,10 @@ public:
 	//add moving nodes to speed up force
 	int* moving_nodes;
 	int n_moving;
+	int * chunk_nodes;
+	int * chunk_edges;
+	int chunk_edges_len;
+	int chunk_nodes_len;
 
 	
 };

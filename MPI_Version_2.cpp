@@ -84,13 +84,45 @@ int main(int argc, char* argv[]) {
 	int y_lo = ((MAXBOUND*2.0/world_size) * y_level);
 	int y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? MAXBOUND : ((MAXBOUND*2.0/world_size) * (y_level+1)) - 1;
 
+	//put them in a chunk specific array:
+	main_network->chunk_nodes_len = main_network->n_nodes/world_size + sqrt(main_network->n_nodes)/2;
+	main_network->chunk_nodes = new int[main_network->chunk_nodes_len];
+	int k = 0;
+	for (int i = 0; i < main_network->n_nodes; i+=DIM) {
+		if (main_network->R[i*DIM] >= x_lo && main_network->R[i*DIM] <= x_hi && main_network->R[i*DIM + 1] >= y_lo && main_network->R[i*DIM + 1] <= y_hi) {
+			main_network->chunk_nodes[k] = i;
+			k++;
+		}
+	}
+	for (; k < main_network->chunk_nodes_len; k++) {
+		main_network->chunk_nodes[k] = -1;
+	}
+	main_network->chunk_edges_len = main_network->n_elems*DIM/world_size + sqrt(main_network->n_elems)/2;
+	main_network->chunk_edges = new int[main_network->chunk_edges_len];
+	k = 0;
+	for (int i = 0; i < main_network->n_elems; i+=DIM) {
+		if (main_network->R[main_network->edges[i]*DIM] < x_lo || main_network->R[main_network->edges[i]*DIM] > x_hi || main_network->R[main_network->edges[i]*DIM+1] < y_lo || main_network->R[main_network->edges[i]*DIM+1] > y_hi) {
+			continue;
+		}
+		else {
+			main_network->chunk_edges[k] = i;
+			k++;
+		}
+	}
+	for ( ; k < main_network->chunk_edges_len; k++) {
+		main_network->chunk_edges[k] = -1;
+	}
+	
+
 	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	float * forces_buffer = new float[main_network->n_nodes * DIM * world_size];
-	float * recv_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
-	bool * broken_buffer = new bool[world_size];
-	int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
+	//float * forces_buffer = new float[main_network->n_nodes * DIM * world_size];
+	float * R_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
+	int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
+	MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
+	//bool * broken_buffer = new bool[world_size];
+	//int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
 	int iter = 0; // needed to write forces later
 	clock_t t = clock(); 
 	for(iter = 0; iter<STEPS; iter++){
@@ -104,56 +136,66 @@ int main(int argc, char* argv[]) {
 		}
 		bool BROKEN = false;
 		//TODO: add broken flag
-
+		cout << __LINE__ << endl;
 		main_network->optimize(BROKEN, x_lo, x_hi, y_lo, y_hi);
+		cout << __LINE__ << endl;
 		//TODO: use Network::get_plate_forces() on root proc
-		MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		//MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 
-		MPI_Barrier(MPI_COMM_WORLD);
+		//MPI_Barrier(MPI_COMM_WORLD);
 
 
 		//TODO: check the size of array parameter
-		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, recv_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		
+
 		if (world_rank == 0) {
-			for (int i = 0; i < main_network->n_nodes * DIM; i++) {
-				int proc_to_copy_from = (main_network->R[i]/chunk_size);
-				main_network->R[i] = recv_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
-				main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
+			for (int i = 0; i < main_network->chunk_nodes_len * world_size; i += main_network->chunk_nodes_len) {
+				int proc_to_copy_from = i / main_network->chunk_nodes_len;
+				for (int j = i; j < i + main_network->chunk_nodes_len; j++) {
+					if (chunk_nodes_buffer[j] != -1) {
+						main_network->R[DIM * chunk_nodes_buffer[j]] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + DIM * chunk_nodes_buffer[j]];
+						main_network->R[DIM * chunk_nodes_buffer[j] + 1] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + DIM * chunk_nodes_buffer[j] + 1];
+					}
+				}
+				// int proc_to_copy_from = (main_network->R[i]/chunk_size);
+				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
+				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
 			}
 		}
 		
 		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		MPI_Bcast(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		//MPI_Bcast(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		// if (world_rank == 0) {
 		// 	for (int i = 0; i < main_network->n_nodes; i++) {
 		// 		printf("%d:\t%f\t%f\n",i, main_network->forces[2*i],main_network->forces[2*i+1]);
 		// 	}
 		// }
 		//checking if edges need to be resynced
-		MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
 		//cout << __LINE__ << endl;
-		bool need_edges_resyncing = false;
-		for (int i = 0; i < world_size; i++) {
-			need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
-			if (need_edges_resyncing) {
-				break;
-			}
-		}
-		if (need_edges_resyncing) {
-			MPI_Gather(main_network->edges, main_network->n_elems * DIM, MPI_INT, edges_buffer, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
-			if (world_rank == 0) {
-				for (int i = 0; i < main_network->n_elems * DIM; i += DIM) {
-					int proc_to_copy_from = i / chunk_size;
-					main_network->edges[i] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i];
-					main_network->edges[i+1] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i + 1];
-				}
-			}
-			MPI_Bcast(main_network->edges, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
+		//MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
+		//cout << __LINE__ << endl;
+		// bool need_edges_resyncing = false;
+		// for (int i = 0; i < world_size; i++) {
+		// 	need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
+		// 	if (need_edges_resyncing) {
+		// 		break;
+		// 	}
+		// }
+		// if (need_edges_resyncing) {
+		// 	MPI_Gather(main_network->edges, main_network->n_elems * DIM, MPI_INT, edges_buffer, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
+		// 	if (world_rank == 0) {
+		// 		for (int i = 0; i < main_network->n_elems * DIM; i += DIM) {
+		// 			int proc_to_copy_from = i / chunk_size;
+		// 			main_network->edges[i] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i];
+		// 			main_network->edges[i+1] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i + 1];
+		// 		}
+		// 	}
+		// 	MPI_Bcast(main_network->edges, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
 			
-		}
-
+		// }
+		cout << __LINE__ << endl;
 		if (world_rank == 0) {
 			//move_top_nodes(R, tsideNodes, n_tside);
 			main_network->move_top_plate();
@@ -161,7 +203,7 @@ int main(int argc, char* argv[]) {
 			main_network->get_stats();
 			
 		}
-
+		cout << __LINE__ << endl;
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
 	cout<<__LINE__<<endl;
@@ -172,9 +214,17 @@ int main(int argc, char* argv[]) {
 		free(plate_forces);
 	}
 
-
+	cout << __LINE__ << endl;
 	MPI_Finalize();
 }
+
+// template <class T, class P>
+// void mpi_gather_sync_bcast(P* input_array, int len, int world_rank, int world_size) {
+
+// 	P* recv_buffer = new P[len*world_size];
+// 	MPI_Gather(input_array, len, T, recv_buffer, len, T, 0, MPI_COMM_WORLD);
+
+// }
 
 
 

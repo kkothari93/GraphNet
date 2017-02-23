@@ -444,7 +444,8 @@ void Network::build_network() {
 void Network::malloc_network(string& fname){
 	
 	read_n(n_nodes, n_elems, fname);
-
+	chunk_nodes = NULL;
+	chunk_edges = NULL;
 
 	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
 	// add memory for side connections
@@ -723,11 +724,14 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 
 	//memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
 	memset(&forces[DIM*n_elems], 0.0, n_elems*DIM*sizeof(float));
-	for (j = 0; j < n_elems; j++){
+
+	
+	for (j = 0; j < chunk_edges_len; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
-		node1 = edges[j * 2]; 
-		node2 = edges[j * 2 + 1];
-		
+		//node1 = edges[j * 2]; 
+		//node2 = edges[j * 2 + 1];
+		node1 = edges[chunk_edges[j] * 2];
+		node2 = edges[(chunk_edges[j] * 2) + 1];
 		// check if pair exists
 		if(node1 == -1 || node2 == -1) {
 			continue;
@@ -743,10 +747,13 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 			r2[k] = R[node2*DIM + k];
 		}
 
-		if ((r1[0] < x_lo || r1[0] > x_hi || r1[1] < y_lo || r1[1] > y_hi) && (r2[0] < x_lo || r2[0] > x_hi || r2[1] < y_lo || r2[1] > y_hi))  {
-			continue;
-		}
+
+		// if ((r1[0] < x_lo || r1[0] > x_hi || r1[1] < y_lo || r1[1] > y_hi) && (r2[0] < x_lo || r2[0] > x_hi || r2[1] < y_lo || r2[1] > y_hi))  {
+		// 	continue;
+		// }
 		
+
+
 		// check PBC_STATUS
 		if (PBC[j]) {
 			// add PBC_vector to get new node position
@@ -1034,7 +1041,14 @@ void Network::optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, flo
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
-				if (R[node*DIM] >= x_lo && R[node*DIM] <= x_hi && R[node*DIM + 1] >= y_lo && R[node*DIM + 1] <= y_hi) {//if(node>=lo && node<=hi){
+				bool belongs_to_chunk = false;
+				for (int i = 0; i < chunk_nodes_len; i++) {
+					if (chunk_nodes[i] == node) {
+						belongs_to_chunk = true;
+						break;
+					}
+				}				
+				if (belongs_to_chunk) {//R[node*DIM] >= x_lo && R[node*DIM] <= x_hi && R[node*DIM + 1] >= y_lo && R[node*DIM + 1] <= y_hi) {//if(node>=lo && node<=hi){
 					#pragma unroll
 					for(d = 0; d<DIM; d++){
 						g = forces[DIM*node+d];
