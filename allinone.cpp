@@ -6,6 +6,7 @@
 #include <random>
 #include <time.h>
 #include <vector>
+#include <unistd.h>
 #include <algorithm>
 #include <ctime>
 #include <chrono>
@@ -70,13 +71,13 @@ public:
 	float set_weight(float);
 	bool get_stats();
 	int get_current_edges();
-	void plotNetwork(Gnuplot&, int, bool);
+	void plotNetwork(int, bool);
 
 protected:
 
 	void clear();
 	void copy(Network const & source);
-	
+	Gnuplot gnu;
 	bool cracked;
 	//int DIM;
 	int n_nodes;
@@ -750,10 +751,10 @@ void Network::apply_crack(Crack const & crack) {
 
 
 
-void Network::plotNetwork(Gnuplot& h, int iter_step, bool first_time){
+void Network::plotNetwork(int iter_step, bool first_time){
 	ofstream f;
 	float c;
-	f.open("data.txt");
+	f.open("data.txt",std::ofstream::out | std::ofstream::trunc);
 	// std::default_random_engine seed;
 	// std::uniform_real_distribution<float> arbitcolor(0.0,1.0);
 	int node1, node2;
@@ -842,19 +843,19 @@ void Network::plotNetwork(Gnuplot& h, int iter_step, bool first_time){
 	stringstream convert;
 	convert<<"[-100:"<<MAXBOUND+100<<"]";
 	string xrange = convert.str();
-	h.cmd("set xrange " + xrange);
-	h.cmd("load 'viridis.pal'");
-	h.cmd("set key off");
-	h.cmd("set colorbox default vertical");
-	h.cmd("set cbrange [0:1]");
-	h.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
-	h.cmd("plot 'data.txt' every ::0::1 u 1:2:3 with l lc palette lw 2 title '"+\
+	gnu.cmd("set xrange " + xrange);
+	gnu.cmd("load 'viridis.pal'");
+	gnu.cmd("set key off");
+	gnu.cmd("set colorbox default vertical");
+	gnu.cmd("set cbrange [0:1]");
+	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
+	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
 		std::to_string(iter_step)+"'");
-	h.cmd("set term png size 1200,900");
-	h.cmd("set output '"+std::to_string(iter_step)+".png'");
-	h.cmd("replot");
-	h.cmd("set term x11");
-	h.reset_plot();
+	gnu.cmd("set term png size 1200,900");
+	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
+	gnu.cmd("replot");
+	gnu.cmd("set term x11");
+	gnu.reset_plot();
 }
 
 int Network::get_current_edges(){
@@ -1011,9 +1012,12 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
+	char p;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false);
+		plotNetwork(10000+step, false);
+		sleep(1);
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
@@ -1030,6 +1034,7 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 			break;
 		}
 	}
+	//
 	get_forces(true);
 	delete[] rms_history;
 	delete[] delR;
@@ -1176,7 +1181,8 @@ void sacNetwork::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; 
+				 force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 			// subtract back the PBC_vector to get original node position
 			// #pragma unroll
@@ -1188,7 +1194,8 @@ void sacNetwork::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; 
+				force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
@@ -1312,7 +1319,7 @@ void sacNetwork::load_network(string& fname) {
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	string path = "./template2d_z4.msh";
+	string path = "./template2d.msh";
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
@@ -1341,8 +1348,7 @@ int main() {
 	}
 
 
-	Gnuplot g;
-	test_network.plotNetwork(g, 0, true);
+	test_network.plotNetwork(0, true);
 
 	clock_t t = clock();
 	cout<<"\n Will run for "<<STEPS<<":\n";
@@ -1352,16 +1358,17 @@ int main() {
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
-		curr_n_edges = test_network.get_current_edges();
 		if((i+1)%100 == 0){
 			should_stop = test_network.get_stats();
 			if(should_stop){break;}
+			curr_n_edges = test_network.get_current_edges();
+			if(curr_n_edges<old_n_edges){
+					test_network.plotNetwork(i+1, true);
+			}
 			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
 		}
-		if(curr_n_edges<old_n_edges){
-				test_network.plotNetwork(g, i+1, true);
-		}
+
 	}
 
 	string fname = FNAME_STRING + std::to_string(L_STD/L_MEAN) + ".txt";
