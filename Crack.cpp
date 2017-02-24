@@ -1,16 +1,31 @@
 #include "crack.h"
-
 // Crack::Crack() : Crack(2) {
 	
 // }
 
-Crack::Crack() :Crack(2) {}
+// Crack::Crack() :Crack(2) {}
 
-Crack::Crack(int dim) {
+Crack::Crack(float cx, float cy, float ax, float ay) {
 
-	this->dim = dim;
-	c = new float[dim];
+	this->dim = 2;
+	c = new float[dim]; 
 	a = new float[dim];
+	c[0] = cx;
+	c[1] = cy;
+	a[0] = ax;
+	a[1] = ay;
+}
+
+Crack::Crack(float cx, float cy, float cz, float ax, float ay, float az) {
+	this->dim = 3;
+	c = new float[dim]; 
+	a = new float[dim];
+	c[0] = cx;
+	c[1] = cy;
+	c[2] = cz;
+	a[0] = ax;
+	a[1] = ay;
+	a[2] = az;
 }
 
 Crack::~Crack() {

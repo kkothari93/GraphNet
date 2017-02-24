@@ -14,19 +14,23 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <cstring>
 #include "crack.h"
 #include <stddef.h>
+#include "vel.h"
+using namespace std;
 
 #define __params__	
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 10.0						// Simulation time
+#define SIM_TIME 5.0						// Simulation time
 #define TOL 1e-6							// Tolerance
-#define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
+#define STEPS 200 //int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 120.0f						// Average for contour length
-#define L_STD 4.0f							// Std. deviation for contour lengths
+#define L_STD 20.0f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
+#define CRACKED false
 
 // Define constants
 #define __constants__
@@ -40,25 +44,65 @@
 
 using namespace std;
 
+const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+const float vel[DIM] = {vel_x, vel_y};
+
+template <typename t>
+void write_to_file(string& fname, t* arr, int rows, int cols){
+
+	ofstream logger;
+	std::time_t result = std::time(nullptr);
+
+
+	cout<<"1D pulling of a 2D gel"<<endl;
+	cout<<"File created at "<<std::asctime(std::localtime(&result));
+	cout<<endl;
+
+	cout<<"Sim dimension : "<<DIM<<endl;
+	cout<<"Simulation time : "<<SIM_TIME<<endl;
+	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
+	cout<<endl;
+
+	cout<<"Disorder characteristics : "<<endl;
+	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
+	cout<<" -- L_STD : "<<L_STD<<endl;
+	cout<<endl;
+	
+	cout<<"Cracked? : "<<CRACKED<<endl;
+
+	logger.open(fname, ios::trunc|ios_base::out);
+	for(int i =0; i < rows; i++){
+		for(int j = 0; j< cols; j++){
+			logger<<arr[i*cols + j]<<"\t";
+		}
+		logger<<"\n";
+	}
+}
+
 class Network {
 
 public:
-
 	Network();
 	Network(Network const & source);
-	Network(string fname);
+	Network(string& fname);
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	void build_network();
 	void apply_crack(Crack const & crack);
-	void load_network(string fname);
+	void load_network(string&);
+	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(const float* PBC_vector, bool update_damage = false);
+	bool get_forces(bool, int lo = 0, int hi = 0);
+	void move_top_plate();
+	void get_plate_forces(float*, int);
+	void optimize(bool& BROKEN, int lo, int hi, float eta = 0.1, float alpha = 0.9, int max_iter = 800);
+	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
+	int get_current_edges();
+	bool get_stats();
+	float get_weight();
+	void set_weight(float weight);
 
-
-	
-
-private:
+//private:
 
 	void clear();
 	void copy(Network const & source);
@@ -69,18 +113,21 @@ private:
 	int n_elems;
 	int n_rside, n_lside, n_bside, n_tside;
 	//int num_edges;
-	float * R;
-	int * edges;
-	float * forces;
-	float * damage;
-	bool ** edge_matrix;
-	float * L;
-	bool* PBC;
-	int* lsideNodes;
+	float * R; //n_nodes*DIM
+	int * edges; //n_elems*2
+	float * forces; //n_nodes*DIM
+	float * damage;// n_nodes
+	bool ** edge_matrix; 
+	float * L; //n_elems
+	bool* PBC; //n_elems
+	int* lsideNodes; //max_nodes_on_a_side*2
 	int* rsideNodes;
 	int* tsideNodes;
 	int* bsideNodes;
 	bool initialized;
+	//add moving nodes to speed up force
+	int* moving_nodes;
+	int n_moving;
 
 	
 };

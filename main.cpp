@@ -33,81 +33,81 @@
 #define ae 0.1 								// Strength of bond - includes activation energy
 #define delxe 0.15 							// parameter for breaking crosslink connection
 
-static double vel[DIM] = {0.0, 100.0};
+static float vel[DIM] = {0.0, 100.0};
 
-inline double getnorm(const double* vec, const int dim = DIM){
-	double s = 0;
+inline float getnorm(const float* vec, const int dim = DIM){
+	float s = 0;
 	for (int j = 0; j<DIM; j++){
 		s += pow(vec[j], 2);
 	}
 	return sqrt(s);
 }
 
-inline void convert_to_vector(double* result, const double mag, const double* direction){
+inline void convert_to_vector(float* result, const float mag, const float* direction){
 	for (int i = 0; i<DIM; i++){
 		result[i] = mag*direction[i];
 	}
 }
 
-inline void normalize_vector(double* result, const double* vec){
-	double norm = getnorm(vec);
+inline void normalize_vector(float* result, const float* vec){
+	float norm = getnorm(vec);
 	for (int i = 0; i<DIM; i++){
 		result[i] = vec[i] / norm;
 	}
 }
 
-inline void normalize_vector(double* vec){
-	double norm = getnorm(vec);
+inline void normalize_vector(float* vec){
+	float norm = getnorm(vec);
 	for (int i = 0; i<DIM; i++){
 		vec[i] = vec[i] / norm;
 	}
 }
 
-inline double dist(const double* r1, const double* r2){
-	double s = 0.0;
+inline float dist(const float* r1, const float* r2){
+	float s = 0.0;
 	for (int j = 0; j<DIM; j++){
 		s += pow(r1[j] - r2[j], 2.0);
 	}
 	return sqrt(s);
 }
 
-inline void unitvector(double* result, double* r1, double* r2){
+inline void unitvector(float* result, float* r1, float* r2){
 	for (int j = 0; j<DIM; j++){
 		result[j] = r1[j] - r2[j];
 	}
 	normalize_vector(result);
 }
 
-inline double force_wlc(double x, double L){
-	double t = x / L;
+inline float force_wlc(float x, float L){
+	float t = x / L;
 	if (t < 0.99){ return kB*T / b * (t + 1.0 / 4.0 / pow((1 - t), 2) - 1.0 / 4.0); }
 	else { return 999999.0; }
 }
 
-inline double kfe(double force_mag){
+inline float kfe(float force_mag){
 	return ae * exp(force_mag * delxe / kB / T);
 }
 
-void forcevector(double* result, double* r1, double* r2, double L){
-	double rhat[DIM];
-	double s = dist(r1, r2);
+void forcevector(float* result, float* r1, float* r2, float L){
+	float rhat[DIM];
+	float s = dist(r1, r2);
 	unitvector(rhat, r1, r2);
-	double force = force_wlc(s, L);
+	float force = force_wlc(s, L);
 	convert_to_vector(result, force, rhat);
 }
 
-double psi_wlc(double stretch, double L){
+float psi_wlc(float stretch, float L){
 	return 3.0 / 4.0*kB*T / b*L*pow(L, 2)*(1.0 + 1.0 / 3.0 * stretch / (1 - stretch));
 }
 
-void delpsi_wlc_delrvec(double* result, double* r1, double* r2, double L){
-	double stretch_vector[DIM];
+void delpsi_wlc_delrvec(float* result, float* r1, float* r2, float L){
+	float stretch_vector[DIM];
 	for (int i = 0; i < DIM; i++){
 		stretch_vector[i] = (r1[i] - r2[i]) / L;
 	}
-	double stretch = getnorm(stretch_vector);
-	double delpsi_delr_mag = 3.0*(1.0 + stretch / (1.0 - stretch) / 3.0) + stretch / 2.0 * pow(1.0 / (1.0 - stretch), 2);
-	double normed_stretch_vector[DIM];
+	float stretch = getnorm(stretch_vector);
+	float delpsi_delr_mag = 3.0*(1.0 + stretch / (1.0 - stretch) / 3.0) + stretch / 2.0 * pow(1.0 / (1.0 - stretch), 2);
+	float normed_stretch_vector[DIM];
 	normalize_vector(normed_stretch_vector, stretch_vector);
 	convert_to_vector(result, delpsi_delr_mag, normed_stretch_vector);
 }
@@ -123,18 +123,18 @@ void print_array(t* arr, int n, int dim){
 	}
 }
 
-void get_pull_forces(double* , double* , int , const int* , int);
+void get_pull_forces(float* , float* , int , const int* , int);
 
-void get_forces(double* forces, double* R, int* edges, double* damage,\
-	const double* chain_len, const int num_edges, const bool* PBC_STATUS,\
-	const double* PBC_vector, bool update_damage = false){
+void get_forces(float* forces, float* R, int* edges, float* damage,\
+	const float* chain_len, const int num_edges, const bool* PBC_STATUS,\
+	const float* PBC_vector, bool update_damage = false){
 	// if PBC_STATUS == True, assumes that the 
 	// second node position = second_node_position + PBC_vector
 	
 	int node1, node2;
 	int j, k, id; // loop variables
-	double r1[DIM]; double r2[DIM] ;
-	double edge_force[DIM];
+	float r1[DIM]; float r2[DIM] ;
+	float edge_force[DIM];
 
 	for (j = 0; j < num_edges; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -221,28 +221,28 @@ inline void zero_arr(t* arr, int n){
 	}
 }
 
-void optimize(double*R, int* edges, double* damage_integral, \
-	const double* chain_len, const int num_nodes, const int num_edges, \
-	const bool* PBC_STATUS, const double* PBC_vector, \
+void optimize(float*R, int* edges, float* damage_integral, \
+	const float* chain_len, const int num_nodes, const int num_edges, \
+	const bool* PBC_STATUS, const float* PBC_vector, \
 	const int* tnodes, int n_tnodes, const int* bnodes, int n_bnodes, \
-	double* plate_force, int iter,\
-	double eta = 0.1, double alpha = 0.9, int max_iter = 1000){
+	float* plate_force, int iter,\
+	float eta = 0.1, float alpha = 0.9, int max_iter = 1000){
 	// Momentum based gradient method
 	/*
 	Passive nodes do not participate in optimization
 	*/
-	double* forces = new double[num_nodes*DIM];
-	double* delR = new double[num_nodes*DIM];
-	double* rms_history = new double[num_nodes*DIM]();
-	double* oneby_sqrt_rms_history = new double[num_nodes*DIM]();
-	double g;
+	float* forces = new float[num_nodes*DIM];
+	float* delR = new float[num_nodes*DIM];
+	float* rms_history = new float[num_nodes*DIM]();
+	float* oneby_sqrt_rms_history = new float[num_nodes*DIM]();
+	float g;
 	for(int step = 0; step < max_iter; step++){
 		int id = 0;
-		zero_arr<double>(forces, num_nodes*DIM);
+		zero_arr<float>(forces, num_nodes*DIM);
 		get_forces(forces, R, edges, damage_integral, chain_len, \
 		num_edges, PBC_STATUS, PBC_vector, false);
 		// cout<<"Got upto this point\n";
-		if (getabsmax<double>(forces, num_nodes*DIM) > TOL){
+		if (getabsmax<float>(forces, num_nodes*DIM) > TOL){
 		// get update step
 			for(id = 0; id < num_nodes*DIM; id++){
 				if (ismember<int>(id/DIM, tnodes, n_tnodes) || ismember<int>(id/DIM, bnodes, n_bnodes)){
@@ -260,7 +260,7 @@ void optimize(double*R, int* edges, double* damage_integral, \
 			break;
 		}
 	}
-	zero_arr<double>(forces, num_nodes*DIM);
+	zero_arr<float>(forces, num_nodes*DIM);
 	get_forces(forces, R, edges, damage_integral, chain_len, \
 		num_edges, PBC_STATUS, PBC_vector, true);
 	get_pull_forces(forces, plate_force, iter, tnodes, n_tnodes);
@@ -271,7 +271,7 @@ void optimize(double*R, int* edges, double* damage_integral, \
 	delete[] oneby_sqrt_rms_history;
 }
 
-void inline force_on_plate(double* plate_force, double* forces,\
+void inline force_on_plate(float* plate_force, float* forces,\
 	int* mNodes, int num_mnodes){
 	int node, d = 0;
 	for(d=0;d<DIM;d++){
@@ -285,9 +285,9 @@ void inline force_on_plate(double* plate_force, double* forces,\
 	}
 }
 
-void __init__(double* L, double* damage, bool* PBC, int num_elems){
+void __init__(float* L, float* damage, bool* PBC, int num_elems){
 	std::default_random_engine seed;
-	std::normal_distribution<double> generator(L_MEAN, L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	for(int i=0; i<num_elems; i++){
 		L[i] = generator(seed);
 		damage[i] = 0.0;
@@ -295,14 +295,14 @@ void __init__(double* L, double* damage, bool* PBC, int num_elems){
 	}	
 }
 
-void make_edge_connections(double* R, int* edges, int& num_edges, \
+void make_edge_connections(float* R, int* edges, int& num_edges, \
 	int* lsideNodes, int* rsideNodes, int num_lnodes, int num_rnodes, \
-	bool* PBC_STATUS, double* chainlength, double* damage_integral, \
-	double dely_allowed = 10.0){
+	bool* PBC_STATUS, float* chainlength, float* damage_integral, \
+	float dely_allowed = 10.0){
 	// Checks y coordinates of nodes and connects 
 	// if nodes are close-enough
 	std::default_random_engine seed;
-	std::normal_distribution<double> generator(L_MEAN, L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	int nl, nr, lnode, rnode;
 	for(nl= 0; nl < num_lnodes; nl++){
 		lnode = lsideNodes[nl];
@@ -322,7 +322,7 @@ void make_edge_connections(double* R, int* edges, int& num_edges, \
 
 }
 
-void side_nodes(double* R,\
+void side_nodes(float* R,\
 	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\
 	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
 	// make the list of side nodes
@@ -334,16 +334,16 @@ void side_nodes(double* R,\
 	}
 }
 
-void move_top_nodes(double* R, int* tnodes, int n_tnodes){
+void move_top_nodes(float* R, int* tnodes, int n_tnodes){
 	for(int i=0; i < n_tnodes; i++){
 		R[tnodes[i]*DIM + 1] += vel[1] * TIME_STEP;
 	}
 }
 
-// void convert_neighbors_for_cuda(double* cuda_props, int* neighbors, double* R,  const int n){
+// void convert_neighbors_for_cuda(float* cuda_props, int* neighbors, float* R,  const int n){
 	
 // 	std::default_random_engine generator;
-//   	std::normal_distribution<double> distribution(L_MEAN,L_STD);
+//   	std::normal_distribution<float> distribution(L_MEAN,L_STD);
 // 	int i,j,k = 0;
 // 	int neighbor_id;
 // 	int source_id, dest_id;
@@ -363,7 +363,7 @@ void move_top_nodes(double* R, int* tnodes, int n_tnodes){
 // 	}
 // }
 
-void get_file(const string& filename, double* arr, \
+void get_file(const string& filename, float* arr, \
 	int n_dim, int n_nodes){
 	// Write simulation parameters
 	std::time_t result = std::time(nullptr);
@@ -395,7 +395,7 @@ void get_file(const string& filename, double* arr, \
 	fout.close();
 }
 
-void plot_network(Gnuplot& h, double* R, int* edges, bool* PBC,\
+void plot_network(Gnuplot& h, float* R, int* edges, bool* PBC,\
 	int n_nodes, int n_elems, int iter_step){
 
 	// write to file
@@ -439,7 +439,7 @@ void plot_network(Gnuplot& h, double* R, int* edges, bool* PBC,\
 }
 
 void plot_forces(Gnuplot& h, \
-	const vector<double>& p_x, const vector<double>& p_y, \
+	const vector<float>& p_x, const vector<float>& p_y, \
 	int iter_step){
 	
 	h.remove_tmpfiles();
@@ -452,7 +452,7 @@ void plot_forces(Gnuplot& h, \
 }
 
 
-void get_pull_forces(double* forces, double* plate_force,\
+void get_pull_forces(float* forces, float* plate_force,\
  int iter_step, const int* tside, int tnodes){
 	// Zero the forces first
 	plate_force[2*iter_step] = 0.0;
@@ -463,8 +463,8 @@ void get_pull_forces(double* forces, double* plate_force,\
 	}
 }
 
-void get_components(vector<double>& vec_x , vector<double>& vec_y,\
-	 double* arr, int index){
+void get_components(vector<float>& vec_x , vector<float>& vec_y,\
+	 float* arr, int index){
 	vec_x.push_back(-arr[2*index]);
 	vec_y.push_back(-arr[2*index+1]);
 }
@@ -473,10 +473,10 @@ inline bool contains(vector<int>& vec, int elem){
 	return (std::find(vec.begin(), vec.end(), elem) != vec.end());
 }
 
-void crack(double* c, double* a, double* R, int n_nodes,
+void crack(float* c, float* a, float* R, int n_nodes,
 	int* edges, int n_edges){
 	
-	double equation = 0;
+	float equation = 0;
 	vector<int> nodes_to_remove;
 	
 	for(int i=0; i<n_nodes; i++){
@@ -516,12 +516,12 @@ int main(){
 	int n_nodes=1600, n_elems = 11000;
 
 	// Initialize nodes and edges
-	double* R = (double*)malloc(n_nodes*DIM*sizeof(double));
+	float* R = (float*)malloc(n_nodes*DIM*sizeof(float));
 	int* edges = (int*)malloc(Z_MAX*n_nodes*2*sizeof(int));
-	double* pull_forces = (double*)malloc(STEPS*DIM*sizeof(double));
+	float* pull_forces = (float*)malloc(STEPS*DIM*sizeof(float));
 
-	vector<double> p_x;
-	vector<double> p_y;
+	vector<float> p_x;
+	vector<float> p_y;
 	// file to read and write position data
 	const string fname = "coordinates.txt";
 
@@ -535,23 +535,23 @@ int main(){
 	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
 	int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
 	// get left and right nodes
-	int* lsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(double));
-	int* rsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(double));
+	int* lsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
+	int* rsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
 	// get top and bottom nodes
-	int* tsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(double));
-	int* bsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(double));
+	int* tsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
+	int* bsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
 
 	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes,\
 		n_lside, n_rside, n_tside, n_bside, n_nodes);	
 
 	// Initialize edge properties
-	double* damage = (double*)malloc(2*n_elems*sizeof(double));
-	double* L = (double*)malloc(2*n_elems*sizeof(double));
+	float* damage = (float*)malloc(2*n_elems*sizeof(float));
+	float* L = (float*)malloc(2*n_elems*sizeof(float));
 	bool* PBC = (bool*)malloc(2*n_elems*sizeof(bool));
 	__init__(L, damage, PBC, n_elems);
 
 	// Make PBC connections
-	const double PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+	const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
 	// TODO: get lside and rside nodes
 	make_edge_connections(R, edges, n_elems, \
 		lsideNodes, rsideNodes, n_lside, n_rside, \
@@ -559,8 +559,8 @@ int main(){
 	cout<<"Number after new connections made: "<<n_elems<<endl;
 
 	if(CRACKED){
-		double c[] = {MAXBOUND/2.0, MAXBOUND/2.0};
-		double a[] = {MAXBOUND/20.0, MAXBOUND/25.0};
+		float c[] = {MAXBOUND/2.0, MAXBOUND/2.0};
+		float a[] = {MAXBOUND/20.0, MAXBOUND/25.0};
 		crack(c, a, R, n_nodes, edges, n_elems);
 	}
 	
@@ -576,14 +576,14 @@ int main(){
 	int iter = 0; // needed to write forces later
 
 	for(iter = 0; iter<STEPS; iter++){
-		if((iter+1)%1000 == 0){ // +1 required to have values in p_x, p_y
+		if((iter+1)%1 == 0){ // +1 required to have values in p_x, p_y
 			cout<<(iter+1)<<endl; 
-			cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+			cout<<"That took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
 
 			// plot network
 			//plot_network(gnetwork, R, edges, PBC, \
-			 	n_nodes, n_elems, iter);
+			// 	n_nodes, n_elems, iter);
 			
 			// Plot forces
 			//plot_forces(gforces, p_x, p_y, iter);
@@ -627,19 +627,19 @@ int main(){
 	///////////////////////////////////////////////////////////
 
 
-	// double r1[] = {0.0,0.0};
-	// double r2[] = {1.0, 1.0};
-	// double result[] = {0.0,0.0};
-	// double ch_l = 45;
+	// float r1[] = {0.0,0.0};
+	// float r2[] = {1.0, 1.0};
+	// float result[] = {0.0,0.0};
+	// float ch_l = 45;
 
 	// unitvector(result,r1,r2);
 	// cout<<"Unit vector is : \n";	
-	// print_array<double>(result, 1, DIM);
+	// print_array<float>(result, 1, DIM);
 	// cout<<"Distance is : "<<dist(r1, r2)<<endl;
 	// forcevector(result, r1, r2 , ch_l);
-	// print_array<double>(result, 1, DIM);
+	// print_array<float>(result, 1, DIM);
 
-	//print_array<double>(forces, n_nodes, DIM);
+	//print_array<float>(forces, n_nodes, DIM);
 
 	// cout<<"Pair\tchain length\t distance"<<endl;
 	// int node1, node2;
@@ -650,10 +650,10 @@ int main(){
 	//  		r2[k] = R[node2*DIM + k];
 	//  	}
 	//  	cout<<"("<<node1<<", "<<node2<<")\n";
-	//  	print_array<double>(r1, 1, DIM);
-	//  	print_array<double>(r2, 1, DIM);
+	//  	print_array<float>(r1, 1, DIM);
+	//  	print_array<float>(r2, 1, DIM);
 	//  	unitvector(result, r1, r2);
-	//  	print_array<double>(result, 1, DIM);
+	//  	print_array<float>(result, 1, DIM);
 	//  	cout<<"Distance, L, PBC =  "<<dist(r1, r2)<<", "<<L[i]<<", "<<PBC[i]<<endl;
 	//  	cout<<"Force = "<<force_wlc(dist(r1,r2), L[i])<<endl;
 	//  // 	cout<<"("<<node1<<", "<<node2<<")\t"\
