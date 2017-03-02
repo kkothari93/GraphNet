@@ -183,6 +183,7 @@ int main(int argc, char* argv[]) {
 				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * i + i];
 				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
 			}
+			main_network->plotNetwork(iter, false);
 			main_network->move_top_plate();
 
 		}
