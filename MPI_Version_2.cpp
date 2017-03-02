@@ -41,6 +41,8 @@
 
 //static double vel[DIM] = {0.0, 100.0};
 
+//TODO: Define function bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi);
+
 
 int main(int argc, char* argv[]) {
 
@@ -70,6 +72,7 @@ int main(int argc, char* argv[]) {
 	main_network->get_weight();
 	bool should_stop = main_network->get_stats();
 	if(should_stop || world_size % 2 == 1) {
+		//Always take even number of processors
 		return 0;
 	}
     
@@ -84,27 +87,38 @@ int main(int argc, char* argv[]) {
 	int y_lo = ((MAXBOUND*2.0/world_size) * y_level);
 	int y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? MAXBOUND : ((MAXBOUND*2.0/world_size) * (y_level+1)) - 1;
 
+
 	//put them in a chunk specific array:
-	main_network->chunk_nodes_len = main_network->n_nodes/world_size + sqrt(main_network->n_nodes)/2;
+	// changed from /2 to *2
+	main_network->chunk_nodes_len = main_network->n_nodes/world_size + sqrt(main_network->n_nodes)*2; 
 	main_network->chunk_nodes = new int[main_network->chunk_nodes_len];
 	int k = 0;
-	for (int i = 0; i < main_network->n_nodes; i+=DIM) {
+	// changed from i+=DIM to i+=1, use Rinset
+	for (int i = 0; i < main_network->n_nodes; i+=1) {
 		if (main_network->R[i*DIM] >= x_lo && main_network->R[i*DIM] <= x_hi && main_network->R[i*DIM + 1] >= y_lo && main_network->R[i*DIM + 1] <= y_hi) {
 			main_network->chunk_nodes[k] = i;
 			k++;
 		}
 	}
+	// setting extra elements to -1
 	for (; k < main_network->chunk_nodes_len; k++) {
 		main_network->chunk_nodes[k] = -1;
 	}
-	main_network->chunk_edges_len = main_network->n_elems*DIM/world_size + sqrt(main_network->n_elems)/2;
-	main_network->chunk_edges = new int[main_network->chunk_edges_len];
+
+	//moved *DIM from chunk_edges_len calc to new int [] declaration, also changed /2 to *2
+	main_network->chunk_edges_len = main_network->n_elems/world_size + sqrt(main_network->n_elems)*2;
+	main_network->chunk_edges = new int[main_network->chunk_edges_len*DIM];
 	k = 0;
-	for (int i = 0; i < main_network->n_elems; i+=DIM) {
-		if (main_network->R[main_network->edges[i]*DIM] < x_lo || main_network->R[main_network->edges[i]*DIM] > x_hi || main_network->R[main_network->edges[i]*DIM+1] < y_lo || main_network->R[main_network->edges[i]*DIM+1] > y_hi) {
+
+	//changed i+=DIM to i+=1
+	for (int i = 0; i < main_network->n_elems; i+=1) {
+
+		// check this condition for both edges, use Rinset
+		if (main_network->R[main_network->edges[i*2]*DIM] < x_lo || main_network->R[main_network->edges[i*2]*DIM] > x_hi || main_network->R[main_network->edges[i*2]*DIM+1] < y_lo || main_network->R[main_network->edges[i*2]*DIM+1] > y_hi) {
 			continue;
 		}
 		else {
+			// This is not correct logic: this would not add the counter point (b) for edge i (a,b)
 			main_network->chunk_edges[k] = i;
 			k++;
 		}
