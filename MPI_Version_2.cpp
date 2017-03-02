@@ -41,7 +41,10 @@
 
 //static double vel[DIM] = {0.0, 100.0};
 
-//TODO: Define function bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi);
+//TODO: Define function 
+inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
+	return (R[0] >= x_lo && R[0] <= x_hi && R[1] >= y_lo && R[1] <= y_hi);
+}
 
 
 int main(int argc, char* argv[]) {
@@ -95,7 +98,7 @@ int main(int argc, char* argv[]) {
 	int k = 0;
 	// changed from i+=DIM to i+=1, use Rinset
 	for (int i = 0; i < main_network->n_nodes; i+=1) {
-		if (main_network->R[i*DIM] >= x_lo && main_network->R[i*DIM] <= x_hi && main_network->R[i*DIM + 1] >= y_lo && main_network->R[i*DIM + 1] <= y_hi) {
+		if (!Rinset(&(main_network->R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			main_network->chunk_nodes[k] = i;
 			k++;
 		}
@@ -105,16 +108,18 @@ int main(int argc, char* argv[]) {
 		main_network->chunk_nodes[k] = -1;
 	}
 
+	//TODO: chunk node uniqueness check : sum each and check total against sum of 1+2+3+...+n_nodes
+
 	//moved *DIM from chunk_edges_len calc to new int [] declaration, also changed /2 to *2
 	main_network->chunk_edges_len = main_network->n_elems/world_size + sqrt(main_network->n_elems)*2;
-	main_network->chunk_edges = new int[main_network->chunk_edges_len*DIM];
+	main_network->chunk_edges = new int[main_network->chunk_edges_len];
 	k = 0;
 
 	//changed i+=DIM to i+=1
 	for (int i = 0; i < main_network->n_elems; i+=1) {
 
 		// check this condition for both edges, use Rinset
-		if (main_network->R[main_network->edges[i*2]*DIM] < x_lo || main_network->R[main_network->edges[i*2]*DIM] > x_hi || main_network->R[main_network->edges[i*2]*DIM+1] < y_lo || main_network->R[main_network->edges[i*2]*DIM+1] > y_hi) {
+		if (!Rinset(&(main_network->R[main_network->edges[i*2]*DIM]),x_lo, x_hi, y_lo, y_hi) && !Rinset(&(main_network->R[main_network->edges[i*2+1]*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			continue;
 		}
 		else {
@@ -163,56 +168,29 @@ int main(int argc, char* argv[]) {
 		//TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		
-
+		// syncing R
 		if (world_rank == 0) {
-			for (int i = 0; i < main_network->chunk_nodes_len * world_size; i += main_network->chunk_nodes_len) {
-				int proc_to_copy_from = i / main_network->chunk_nodes_len;
-				for (int j = i; j < i + main_network->chunk_nodes_len; j++) {
-					if (chunk_nodes_buffer[j] != -1) {
-						main_network->R[DIM * chunk_nodes_buffer[j]] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + DIM * chunk_nodes_buffer[j]];
-						main_network->R[DIM * chunk_nodes_buffer[j] + 1] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + DIM * chunk_nodes_buffer[j] + 1];
+			int node_to_sync  = 0;
+			for (int i = 0; i < world_size; i += 1) {
+				for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
+					node_to_sync = chunk_nodes_buffer[j];
+					if (node_to_sync != -1) {
+						main_network->R[DIM * node_to_sync] = R_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
+						main_network->R[DIM * node_to_sync + 1] = R_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
 					}
 				}
-				// int proc_to_copy_from = (main_network->R[i]/chunk_size);
-				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
-				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * proc_to_copy_from + i];
+				// int i = (main_network->R[i]/chunk_size);
+				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * i + i];
+				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
 			}
+			main_network->move_top_plate();
+
 		}
 		
 		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		//MPI_Bcast(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		// if (world_rank == 0) {
-		// 	for (int i = 0; i < main_network->n_nodes; i++) {
-		// 		printf("%d:\t%f\t%f\n",i, main_network->forces[2*i],main_network->forces[2*i+1]);
-		// 	}
-		// }
-		//checking if edges need to be resynced
-		//cout << __LINE__ << endl;
-		//MPI_Allgather(&BROKEN, 1, MPI_C_BOOL, broken_buffer, 1, MPI_C_BOOL, MPI_COMM_WORLD);
-		//cout << __LINE__ << endl;
-		// bool need_edges_resyncing = false;
-		// for (int i = 0; i < world_size; i++) {
-		// 	need_edges_resyncing = need_edges_resyncing || broken_buffer[i];
-		// 	if (need_edges_resyncing) {
-		// 		break;
-		// 	}
-		// }
-		// if (need_edges_resyncing) {
-		// 	MPI_Gather(main_network->edges, main_network->n_elems * DIM, MPI_INT, edges_buffer, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
-		// 	if (world_rank == 0) {
-		// 		for (int i = 0; i < main_network->n_elems * DIM; i += DIM) {
-		// 			int proc_to_copy_from = i / chunk_size;
-		// 			main_network->edges[i] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i];
-		// 			main_network->edges[i+1] = edges_buffer[main_network->n_elems * DIM * proc_to_copy_from + i + 1];
-		// 		}
-		// 	}
-		// 	MPI_Bcast(main_network->edges, main_network->n_elems * DIM, MPI_INT, 0, MPI_COMM_WORLD);
-			
-		// }
+
 		cout << __LINE__ << endl;
 		if (world_rank == 0) {
-			//move_top_nodes(R, tsideNodes, n_tside);
-			main_network->move_top_plate();
 			main_network->get_plate_forces(plate_forces, iter);
 			main_network->get_stats();
 			

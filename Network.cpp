@@ -729,7 +729,7 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 	for (j = 0; j < chunk_edges_len; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
 		//node1 = edges[j * 2]; 
-		//node2 = edges[j * 2 + 1];
+		// chunk edges is the index of the edge array and not the edge itself
 		node1 = edges[chunk_edges[j] * 2];
 		node2 = edges[(chunk_edges[j] * 2) + 1];
 		// check if pair exists
