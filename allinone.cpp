@@ -25,13 +25,15 @@ using namespace std;
 #define SIM_TIME 8.0						// Simulation time
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-#define L_MEAN 120.0f						// Average for contour length
-#define L_STD 12.0f							// Std. deviation for contour lengths
+#define L_MEAN 240.0f						// Average for contour length
+#define L_STD 0.001f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
-#define SACBONDS true
-#define FNAME_STRING "uniform_disorder_triag"
+#define SACBONDS false
+#define IMPLEMENT_PBC true
+#define FNAME_STRING "zero_disorder_high_L_"
 #define CRACKED false
+
 
 // Define constants
 #define __constants__
@@ -41,9 +43,8 @@ using namespace std;
 #define T 300 								// Temperature
 #define ae 0.1 								// Strength of bond - includes activation energy
 #define delxe 0.15 							// parameter for breaking crosslink connection
-#define af 0.01
-#define delxf 0.1
-#define BLOCK_SIZE 1024
+#define af 0.3
+#define delxf 0.25
 
 using namespace std;
 
@@ -334,7 +335,8 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
+	// std::normal_distribution<float> generator(L_MEAN, L_STD);
 	#pragma unroll
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
@@ -553,8 +555,9 @@ void Network::load_network(string& fname) {
 	cout<<"Side nodes written successfully! \n";
 	__init__(L, damage, PBC, n_elems);
 
-	this->make_edge_connections(15.0);
-	cout<<"Number after new connections made: "<<n_elems<<endl;
+	if(IMPLEMENT_PBC){
+		this->make_edge_connections(15.0);
+		cout<<"Number after new connections made: "<<n_elems<<endl;}
 
 }
 
@@ -1016,8 +1019,6 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false);
-		plotNetwork(10000+step, false);
-		sleep(1);
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
@@ -1067,12 +1068,12 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 	logger<<"Sim dimension : "<<DIM<<"\n";
 	logger<<"Simulation time : "<<SIM_TIME<<"\n";
 	logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
-	logger<<"\n";
+	logger<<"Maxbound : "<<MAXBOUND<<"\n";
 
 	logger<<"Disorder characteristics : "<<"\n";
 	logger<<" -- L_MEAN : "<<L_MEAN<<"\n";
 	logger<<" -- L_STD : "<<L_STD<<"\n";
-	logger<<"\n";
+	logger<<"Others : SACBONDS = "<<SACBONDS<<"; IMPLEMENT_PBC = "<<IMPLEMENT_PBC<<"\n";
 	
 	logger<<"Cracked? : "<<CRACKED<<"\n";
 
@@ -1203,6 +1204,8 @@ void sacNetwork::get_forces(bool update_damage = false) {
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
+
+
 		//update damage if needed
 		if (update_damage){
 			damage[j] += kfe(force)*TIME_STEP;
@@ -1311,15 +1314,16 @@ void sacNetwork::load_network(string& fname) {
 	cout<<"Side nodes written successfully! \n";
 	__init__(L, m, damage, sacdamage, PBC, n_elems);
 
-	this->make_edge_connections(15.0);
-	cout<<"Number after new connections made: "<<n_elems<<endl;
-
+	if(IMPLEMENT_PBC){	
+		this->make_edge_connections(15.0);
+		cout<<"Number after new connections made: "<<n_elems<<endl;
+	}
 }
 
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	string path = "./template2d.msh";
+	string path = "./template2d_z4.msh";
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
@@ -1362,16 +1366,16 @@ int main() {
 			should_stop = test_network.get_stats();
 			if(should_stop){break;}
 			curr_n_edges = test_network.get_current_edges();
-			if(curr_n_edges<old_n_edges){
-					test_network.plotNetwork(i+1, true);
-			}
+			// if(curr_n_edges<old_n_edges){
+			// 		test_network.plotNetwork(i, false);
+			// }
 			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
 		}
 
 	}
-
-	string fname = FNAME_STRING + std::to_string(L_STD/L_MEAN) + ".txt";
+	string sb = SACBONDS ? "true" : "false" ; 
+	string fname = FNAME_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
 	write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 	free(plate_forces);
