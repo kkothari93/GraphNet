@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cmath>
-#include "crack.h"
+#include "Crack.cpp"
 #include <cstdlib>
 #include <math.h>
 #include <random>
@@ -32,7 +32,12 @@ using namespace std;
 #define SACBONDS false
 #define IMPLEMENT_PBC true
 #define FNAME_STRING "zero_disorder_high_L_"
-#define CRACKED false
+#define CRACKED true
+#if CRACKED
+#define PROB_REMOVAL 0.8
+#else
+#define PROB_REMOVAL 0.0
+#endif
 
 
 // Define constants
@@ -60,7 +65,7 @@ public:
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	void build_network();
-	void apply_crack(Crack const & crack);
+	void apply_crack(Cracklist &);
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
@@ -723,29 +728,57 @@ void Network::make_edge_connections(float dely_allowed) {
 
 }
 
-void Network::apply_crack(Crack const & crack) {
-
+void Network::apply_crack(Cracklist & alist) {
+	std::default_random_engine seed;
+	std::uniform_real_distribution<float> generator(0, 1);
 	float equation = 0;
+	//make clusters
+	vector<int> within_circle;
 	vector<int> nodes_to_remove;
-	for(int i=0; i<n_nodes; i++){
-		equation = 0;
-		for(int d=0; d<DIM; d++){
-			equation += pow(R[i*DIM+d]-crack.c[d],2)/pow(crack.a[d],2);
-		}
-		equation -= 1.0;
+	int edges_removed = 0, node1, node2;
+	Crack crack;
+	float x;
+	float y;
+	float si,co;
+	for(int ci = 0; ci < alist.n_cracks; ci++){
+		crack.setter(alist[ci]);
+		
+		for(int i=0; i<n_nodes; i++){
+			x = R[i*DIM];
+			y = R[i*DIM+1];
+			x -= crack.c[0];
+			y -= crack.c[1];
+			si = crack.trig[0];
+			co = crack.trig[0];
+			equation = pow(x*co + y*si, 2)/pow(crack.a[0],2) + \
+						pow(x*si - y*co, 2)/pow(crack.a[1],2);
 
-		if(equation<=0.0){
+			equation -= 1.0;
+
+			if(equation<=0.0){
+				within_circle.push_back(i);
+			}
+		}
+	}
+
+	for(int i= 0; i < n_nodes; i++){
+		if(contains(within_circle, i)){
+			continue;
+		}
+		else{
 			nodes_to_remove.push_back(i);
 		}
 	}
-	int edges_removed = 0, node1, node2;
+
 	for(int i = 0; i<n_elems; i++){
 		node1 = edges[2*i];
 		node2 = edges[2*i+ 1];
-		if(contains(nodes_to_remove, node1) || contains(nodes_to_remove, node2)){
-			edges[2*i] = -1;
-			edges[2*i + 1] = -1;
-			edges_removed += 1;
+		if(contains(nodes_to_remove, node1) && contains(nodes_to_remove, node2)){
+			if(generator(seed) < PROB_REMOVAL){
+				edges[2*i] = -1;
+				edges[2*i + 1] = -1;
+				edges_removed += 1;
+			}
 		}
 	}
 	cout<<"Edges removed : "<<edges_removed<<endl;
@@ -1347,8 +1380,8 @@ int main() {
 	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 
 	if(CRACKED){
-		Crack crack1(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/6.0, MAXBOUND/10.0);
-		test_network.apply_crack(crack1);
+		Cracklist alist(4, MAXBOUND);
+		test_network.apply_crack(alist);
 	}
 
 
@@ -1362,13 +1395,13 @@ int main() {
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
-		if((i+1)%100 == 0){
+		if((i+1)%10 == 0){
 			should_stop = test_network.get_stats();
 			if(should_stop){break;}
 			curr_n_edges = test_network.get_current_edges();
-			// if(curr_n_edges<old_n_edges){
-			// 		test_network.plotNetwork(i, false);
-			// }
+			if(curr_n_edges<old_n_edges){
+					test_network.plotNetwork(i, false);
+			}
 			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 			t = clock();  // reset clock
 		}
