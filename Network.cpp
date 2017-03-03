@@ -625,112 +625,112 @@ void Network::copy(Network const & source) {
 }
 
 
-void Network::plotNetwork(int iter_step, bool first_time){
-	ofstream f;
-	float c;
-	f.open("data.txt",std::ofstream::out | std::ofstream::trunc);
-	// std::default_random_engine seed;
-	// std::uniform_real_distribution<float> arbitcolor(0.0,1.0);
-	int node1, node2;
-	if(first_time){
-		float r1[DIM];
-		float r2[DIM];
-		float s;
-		int j, k;
-		for (j = 0; j < n_elems; j++){
-		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
-			node1 = edges[j * 2]; 
-			node2 = edges[j * 2 + 1];
+// void Network::plotNetwork(int iter_step, bool first_time){
+// 	ofstream f;
+// 	float c;
+// 	f.open("data.txt",std::ofstream::out | std::ofstream::trunc);
+// 	// std::default_random_engine seed;
+// 	// std::uniform_real_distribution<float> arbitcolor(0.0,1.0);
+// 	int node1, node2;
+// 	if(first_time){
+// 		float r1[DIM];
+// 		float r2[DIM];
+// 		float s;
+// 		int j, k;
+// 		for (j = 0; j < n_elems; j++){
+// 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
+// 			node1 = edges[j * 2]; 
+// 			node2 = edges[j * 2 + 1];
 			
-			// check if pair exists
-			if(node1 == -1 || node2 == -1) {
-				continue;
-			}
+// 			// check if pair exists
+// 			if(node1 == -1 || node2 == -1) {
+// 				continue;
+// 			}
 
-			// read the positions
-			#pragma unroll
-			for(k = 0; k<DIM; k++){
-				r1[k] = R[node1*DIM + k]; 
-				r2[k] = R[node2*DIM + k];
-			}
+// 			// read the positions
+// 			#pragma unroll
+// 			for(k = 0; k<DIM; k++){
+// 				r1[k] = R[node1*DIM + k]; 
+// 				r2[k] = R[node2*DIM + k];
+// 			}
 			
-			// check PBC_STATUS
-			if (PBC[j]) {
-				// add PBC_vector to get new node position
-				#pragma unroll
-				for (k = 0; k < DIM; k++){
-					r2[k] += PBC_vector[k];
-				}
-				// get force on node1 due to node2
-				s = dist(r1, r2);
-			}
-			else{
-				s = dist(r1, r2);
-			}
+// 			// check PBC_STATUS
+// 			if (PBC[j]) {
+// 				// add PBC_vector to get new node position
+// 				#pragma unroll
+// 				for (k = 0; k < DIM; k++){
+// 					r2[k] += PBC_vector[k];
+// 				}
+// 				// get force on node1 due to node2
+// 				s = dist(r1, r2);
+// 			}
+// 			else{
+// 				s = dist(r1, r2);
+// 			}
 			
-			c = s/L[j];
-			for(int d = 0; d<DIM; d++){
-					f<<R[node1*DIM+d]<<"\t";
-				}
-				f<<c<<endl;
-			if(!PBC[j]){
-				for(int d = 0; d<DIM; d++){
-					f<<R[node2*DIM+d]<<"\t";
-				}
-			}
-			else{
-				for(int d = 0; d<DIM; d++){
-					f<<(R[node1*DIM+d]+10)<<"\t";
-				}				
-			}
-			f<<c<<endl<<endl;
-		}
-		f.close();
-	}
-	else{
-	for(int i = 0; i<n_elems; i++){
-		c = damage[i];
-		node1 = edges[2*i];
-		node2 = edges[2*i+1];
+// 			c = s/L[j];
+// 			for(int d = 0; d<DIM; d++){
+// 					f<<R[node1*DIM+d]<<"\t";
+// 				}
+// 				f<<c<<endl;
+// 			if(!PBC[j]){
+// 				for(int d = 0; d<DIM; d++){
+// 					f<<R[node2*DIM+d]<<"\t";
+// 				}
+// 			}
+// 			else{
+// 				for(int d = 0; d<DIM; d++){
+// 					f<<(R[node1*DIM+d]+10)<<"\t";
+// 				}				
+// 			}
+// 			f<<c<<endl<<endl;
+// 		}
+// 		f.close();
+// 	}
+// 	else{
+// 	for(int i = 0; i<n_elems; i++){
+// 		c = damage[i];
+// 		node1 = edges[2*i];
+// 		node2 = edges[2*i+1];
 
-		if(node1!=-1 && node2!=-1){
-			for(int d = 0; d<DIM; d++){
-					f<<R[node1*DIM+d]<<"\t";
-				}
-				f<<c<<endl;
-			if(!PBC[i]){
-				for(int d = 0; d<DIM; d++){
-					f<<R[node2*DIM+d]<<"\t";
-				}
-			}
-			else{
-				for(int d = 0; d<DIM; d++){
-					f<<(R[node1*DIM+d]+10)<<"\t";
-				}				
-			}
-		f<<c<<endl<<endl;
-		}
-	}
-	f.close();
-	}
-	//Plot to h
-	stringstream convert;
-	convert<<"[-100:"<<MAXBOUND+100<<"]";
-	string xrange = convert.str();
-	gnu.cmd("set xrange " + xrange);
-	gnu.cmd("load 'viridis.pal'");
-	gnu.cmd("set key off");
-	gnu.cmd("set colorbox default vertical");
-	gnu.cmd("set cbrange [0:1]");
-	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
-	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
-		std::to_string(iter_step)+"'");
-	gnu.cmd("set term png size 1200,900");
-	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
-	gnu.cmd("replot");
-	gnu.cmd("set term x11");
-	gnu.reset_plot();
-}
+// 		if(node1!=-1 && node2!=-1){
+// 			for(int d = 0; d<DIM; d++){
+// 					f<<R[node1*DIM+d]<<"\t";
+// 				}
+// 				f<<c<<endl;
+// 			if(!PBC[i]){
+// 				for(int d = 0; d<DIM; d++){
+// 					f<<R[node2*DIM+d]<<"\t";
+// 				}
+// 			}
+// 			else{
+// 				for(int d = 0; d<DIM; d++){
+// 					f<<(R[node1*DIM+d]+10)<<"\t";
+// 				}				
+// 			}
+// 		f<<c<<endl<<endl;
+// 		}
+// 	}
+// 	f.close();
+// 	}
+// 	//Plot to h
+// 	stringstream convert;
+// 	convert<<"[-100:"<<MAXBOUND+100<<"]";
+// 	string xrange = convert.str();
+// 	gnu.cmd("set xrange " + xrange);
+// 	gnu.cmd("load 'viridis.pal'");
+// 	gnu.cmd("set key off");
+// 	gnu.cmd("set colorbox default vertical");
+// 	gnu.cmd("set cbrange [0:1]");
+// 	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
+// 	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
+// 		std::to_string(iter_step)+"'");
+// 	gnu.cmd("set term png size 1200,900");
+// 	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
+// 	gnu.cmd("replot");
+// 	gnu.cmd("set term x11");
+// 	gnu.reset_plot();
+// }
 // bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 
 // 	bool BROKEN = false;

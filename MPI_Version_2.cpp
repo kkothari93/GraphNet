@@ -13,8 +13,7 @@
 #include <chrono>
 
 
-//#include "gnuplot_i.hpp"
-#include "input.h"
+//#include "input.h"
 #include "Network.h"
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
 //execute using mpirun ./a.out <filename>
@@ -64,8 +63,8 @@ int main(int argc, char* argv[]) {
   	
 
   	Network * main_network = NULL;
-  	string fname = "";
-  	fname = argv[1];
+  	string fname = "template2d.msh";
+  	//fname = argv[1];
   	//TODO: char[] vs string --> test small snippet
 	main_network = new Network(fname);
 	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
@@ -136,7 +135,6 @@ int main(int argc, char* argv[]) {
 	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	//float * forces_buffer = new float[main_network->n_nodes * DIM * world_size];
 	float * R_buffer = new float[main_network->n_nodes * DIM * world_size]; //buffer to gather the R from all nodes
 	int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 	MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
@@ -183,7 +181,7 @@ int main(int argc, char* argv[]) {
 				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * i + i];
 				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
 			}
-			main_network->plotNetwork(iter, false);
+			//main_network->plotNetwork(iter, false);
 			main_network->move_top_plate();
 
 		}

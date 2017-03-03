@@ -18,7 +18,7 @@
 #include "crack.h"
 #include <stddef.h>
 #include "vel.h"
-#include "gnuplot_i.hpp"
+//#include "gnuplot_i.hpp"
 using namespace std;
 
 #define __params__	
@@ -104,13 +104,13 @@ public:
 	bool get_stats();
 	float get_weight();
 	void set_weight(float weight);
-	void plotNetwork(int, bool);
+	//void plotNetwork(int, bool);
 
 //private:
 
 	void clear();
 	void copy(Network const & source);
-	Gnuplot gnu;
+	//Gnuplot gnu;
 	bool cracked;
 	//int DIM;
 	int n_nodes;
