@@ -104,7 +104,7 @@ public:
 	bool get_stats();
 	float get_weight();
 	void set_weight(float weight);
-	//void plotNetwork(int, bool);
+	void plotNetwork(int iter_step, bool first_time);
 
 //private:
 
