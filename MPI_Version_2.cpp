@@ -194,10 +194,8 @@ int main(int argc, char* argv[]) {
 				main_network->get_stats();
 			}
 		}
-		bool BROKEN = false;
-		//TODO: add broken flag
 		//cout <<  world_rank<< "  " <<__LINE__ << endl;
-		main_network->optimize(BROKEN, x_lo, x_hi, y_lo, y_hi);
+		main_network->optimize();
 		//cout <<  world_rank<< "  " <<__LINE__ << endl;
 
 		// if (world_rank == 0) {

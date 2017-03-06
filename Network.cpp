@@ -825,11 +825,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 // 	return BROKEN;
 // }
 
-bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_lo, int y_hi) {
+void Network::get_forces(bool update_damage = false) {
 
-	bool BROKEN = false;
 	int node1, node2;
-	int j, k, id; // loop variables
+	int j, k, l, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
 	float edge_force[DIM];
 	float rhat[DIM];
@@ -838,26 +837,25 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 
 
 	//memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
-	memset(&forces[DIM*n_elems], 0.0, n_elems*DIM*sizeof(float));
+	memset(forces, 0.0, n_elems*DIM*sizeof(float));
 
 	
-	for (j = 0; j < chunk_edges_len; j++){
+	for (l = 0; l < chunk_edges_len; l++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
 		//node1 = edges[j * 2]; 
 		// chunk edges is the index of the edge array and not the edge itself
-		if(chunk_edges[j]==-1){
-			continue;
+		j = chunk_edges[l];
+		if(j==-1){
+			break;
 		}
 
-		node1 = edges[chunk_edges[j] * 2];
-		node2 = edges[(chunk_edges[j] * 2) + 1];
+		node1 = edges[j * 2];
+		node2 = edges[(j * 2) + 1];
 		// check if pair exists
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
-		// if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
-		// 	continue;
-		// }
+
 
 		// read the positions
 		#pragma unroll
@@ -884,14 +882,14 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[chunk_edges[j]] = 0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		else{
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[chunk_edges[j]] = 0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
@@ -912,13 +910,12 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 				}
 				cout<<endl;
 				edges[j*2] = -1; edges[j*2+1] = -1;
-				BROKEN = true;
 			}
 
 		}
 	}
 	//printf("forces: %f\t%f\n", forces[4], forces[5]);
-	return BROKEN;
+	return;
 }
 
 void Network::make_edge_connections(float dely_allowed) {
@@ -1142,15 +1139,13 @@ float getabsmax(float* arr, size_t sizeofarr){
 // 	delete[] delR;
 // }
 
-void Network::optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, float eta, float alpha, int max_iter){
+void Network::optimize(float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float* delR = new float[n_moving*DIM]();
 	float g;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
-		get_forces(false, x_lo, x_hi, y_lo, y_hi);
-		// for(int i=lo; i<hi; i++){
-		// printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
+		get_forces(false);
 	
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < chunk_nodes_len; id++){
@@ -1171,7 +1166,6 @@ void Network::optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, flo
 			break;
 		}
 	}
-	BROKEN = get_forces(true);
 	delete[] rms_history;
 	delete[] delR;
 }
