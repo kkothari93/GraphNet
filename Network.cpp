@@ -531,7 +531,7 @@ void Network::load_network(string& fname) {
 	__init__(L, damage, PBC, n_elems);
 
 	this->make_edge_connections(15.0);
-	//cout<<"Number after new connections made: "<<n_elems<<endl;
+	cout<<"Number after new connections made: "<<n_elems<<endl;
 
 	
 	for (int i = 0; i < n_elems; i++) {
@@ -629,11 +629,12 @@ void Network::copy(Network const & source) {
 
 }
 
-/**
+
 void Network::plotNetwork(int iter_step, bool first_time){
 	ofstream f;
 	float c;
-	f.open("data.txt",std::ofstream::out | std::ofstream::trunc);
+	string filename = "data"+ std::to_string(iter_step)+".txt" ;
+	f.open(filename,std::ofstream::out | std::ofstream::trunc);
 	// std::default_random_engine seed;
 	// std::uniform_real_distribution<float> arbitcolor(0.0,1.0);
 	int node1, node2;
@@ -719,24 +720,24 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	f.close();
 	}
 	//Plot to h
-	stringstream convert;
-	convert<<"[-100:"<<MAXBOUND+100<<"]";
-	string xrange = convert.str();
-	gnu.cmd("set xrange " + xrange);
-	gnu.cmd("load 'viridis.pal'");
-	gnu.cmd("set key off");
-	gnu.cmd("set colorbox default vertical");
-	gnu.cmd("set cbrange [0:1]");
-	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
-	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
-		std::to_string(iter_step)+"'");
-	gnu.cmd("set term png size 1200,900");
-	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
-	gnu.cmd("replot");
-	gnu.cmd("set term x11");
-	gnu.reset_plot();
+	// stringstream convert;
+	// convert<<"[-100:"<<MAXBOUND+100<<"]";
+	// string xrange = convert.str();
+	// gnu.cmd("set xrange " + xrange);
+	// gnu.cmd("load 'viridis.pal'");
+	// gnu.cmd("set key off");
+	// gnu.cmd("set colorbox default vertical");
+	// gnu.cmd("set cbrange [0:1]");
+	// gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
+	// gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
+	// 	std::to_string(iter_step)+"'");
+	// gnu.cmd("set term png size 1200,900");
+	// gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
+	// gnu.cmd("replot");
+	// gnu.cmd("set term x11");
+	// gnu.reset_plot();
 }
-**/
+
 // bool Network::get_forces(bool update_damage = false, int lo, int hi) {
 
 // 	bool BROKEN = false;
@@ -844,6 +845,10 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
 		//node1 = edges[j * 2]; 
 		// chunk edges is the index of the edge array and not the edge itself
+		if(chunk_edges[j]==-1){
+			continue;
+		}
+
 		node1 = edges[chunk_edges[j] * 2];
 		node2 = edges[(chunk_edges[j] * 2) + 1];
 		// check if pair exists
@@ -879,19 +884,14 @@ bool Network::get_forces(bool update_damage = false, int x_lo, int x_hi, int y_l
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[chunk_edges[j]] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
-			// subtract back the PBC_vector to get original node position
-			// #pragma unroll
-			// for (k = 0; k < DIM; k++){
-			// 	r2[k] -= PBC_vector[k];
-			// }
 		}
 		else{
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[chunk_edges[j]] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
@@ -1153,24 +1153,18 @@ void Network::optimize(bool& BROKEN, int x_lo, int x_hi, int y_lo, int y_hi, flo
 		// printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
 	
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
-			for(id = 0; id < n_moving; id++){
-				node = moving_nodes[id];
-				bool belongs_to_chunk = false;
-				for (int i = 0; i < chunk_nodes_len; i++) {
-					if (chunk_nodes[i] == node) {
-						belongs_to_chunk = true;
-						break;
-					}
+			for(id = 0; id < chunk_nodes_len; id++){
+				node = chunk_nodes[id];
+				if (chunk_nodes[id] ==-1) {
+						continue;
 				}				
-				if (belongs_to_chunk) {//R[node*DIM] >= x_lo && R[node*DIM] <= x_hi && R[node*DIM + 1] >= y_lo && R[node*DIM + 1] <= y_hi) {//if(node>=lo && node<=hi){
-					#pragma unroll
+				#pragma unroll
 					for(d = 0; d<DIM; d++){
 						g = forces[DIM*node+d];
 						rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
 						delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
 						R[node*DIM + d] += delR[id*DIM + d];
-					}		
-				}		
+					}				
 			}
 		}
 		else{
