@@ -26,13 +26,13 @@ using namespace std;
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 240.0f						// Average for contour length
-#define L_STD 0.001f							// Std. deviation for contour lengths
+#define L_STD 100.0f							// Std. deviation for contour lengths
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
 #define SACBONDS false
 #define IMPLEMENT_PBC true
 #define FNAME_STRING "zero_disorder_high_L_"
-#define CRACKED true
+#define CRACKED false
 #if CRACKED
 #define PROB_REMOVAL 0.8
 #else
@@ -1046,21 +1046,21 @@ float getabsmax(float* arr, size_t sizeofarr){
 
 void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
-	float* delR = new float[n_moving*DIM]();
-	float g;
+	float g, delR;
 	char p;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false);
+		//plotNetwork(step, true);
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
 				#pragma unroll
 				for(d = 0; d<DIM; d++){
 					g = forces[DIM*node+d];
-					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
-					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
-					R[node*DIM + d] += delR[id*DIM + d];
+					rms_history[id*DIM + d] = alpha*rms_history[id*DIM + d] + (1-alpha)*g*g;
+					delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
+					R[node*DIM + d] += delR;
 				}		
 			}
 		}
@@ -1071,7 +1071,6 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	//
 	get_forces(true);
 	delete[] rms_history;
-	delete[] delR;
 }
 
 void Network::get_plate_forces(float* plate_forces, int iter){
@@ -1395,7 +1394,7 @@ int main() {
 		test_network.optimize();
 		test_network.move_top_plate();
 		test_network.get_plate_forces(plate_forces, i);
-		if((i+1)%10 == 0){
+		if((i+1)%100 == 0){
 			should_stop = test_network.get_stats();
 			if(should_stop){break;}
 			curr_n_edges = test_network.get_current_edges();
