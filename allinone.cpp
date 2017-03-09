@@ -19,6 +19,8 @@
 #include "gnuplot_i.hpp"
 using namespace std;
 
+//TODO: Check sanctity of edges! 
+
 #define __params__	
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
@@ -693,7 +695,7 @@ void Network::get_forces(bool update_damage = false) {
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
 				cout<<"Breaking bond between "
-				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s = "<<force \
+				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s, L = "<<force \
 				<<", "<<s<<endl;
 				for(int d = 0; d<DIM; d++){
 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
