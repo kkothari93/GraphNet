@@ -167,6 +167,7 @@ int main(int argc, char* argv[]) {
 				main_network->get_stats();
 			}
 		}
+		cout << world_rank << " " << __LINE__ << " iter: " << iter << endl;
 		main_network->plotNetwork(iter, false);
 		main_network->optimize();
 		MPI_Barrier(MPI_COMM_WORLD);
@@ -188,13 +189,11 @@ int main(int argc, char* argv[]) {
 
 		// //TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
+		if((iter+1)%NSYNC == 0){
+			MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		}
 		// syncing R
 		if (world_rank == 0) {
-			if((iter+1)%NSYNC == 0){
-				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-			}
-
 			int node_to_sync  = 0;
 			for (int i = 0; i < world_size; i += 1) {
 				for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
@@ -240,6 +239,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	free(R_buffer);
+	cout << "Made it to the end!" << endl;
 	MPI_Finalize();
 	return 1;
 }
