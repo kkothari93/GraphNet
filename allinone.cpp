@@ -639,7 +639,7 @@ void Network::get_forces(bool update_damage = false) {
 	float force;
 
 
-	memset(forces, 0.0, n_nodes*DIM*sizeof(*forces));
+	memset(forces, 0.0, n_nodes*DIM*sizeof(float));
 
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -695,8 +695,8 @@ void Network::get_forces(bool update_damage = false) {
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
 				cout<<"Breaking bond between "
-				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s, L = "<<force \
-				<<", "<<s<<endl;
+				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L, PBC = "<<force \
+				<<", "<<s/L[j]<<", "<<PBC[j]<<endl;
 				for(int d = 0; d<DIM; d++){
 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
 				}
@@ -992,10 +992,10 @@ bool Network::get_stats(){
 	cout<<"node-node x/L std_dev: "<<sqrt(var_t)<<endl;	
 	cout<<"node-node x/L max: "<<max_t<<endl;
 
-	if(shortage/get_weight() > 0.1){
-		cout<<"Disorder too high for given mesh! Exiting...\n";
-		return true;
-	}
+	// if(shortage/get_weight() > 0.1){
+	// 	cout<<"Disorder too high for given mesh! Exiting...\n";
+	// 	return true;
+	// }
 	if((float)c/(float)n_elems < 0.02){
 		cout<<"Too few edges remain in given mesh! Exiting...\n";
 		return true;
@@ -1053,7 +1053,8 @@ void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false);
-		//plotNetwork(step, true);
+		// plotNetwork(step, true);
+		// cin>>p;
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < n_moving; id++){
 				node = moving_nodes[id];
