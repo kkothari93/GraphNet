@@ -14,6 +14,7 @@
 
 #include "Network.h"
 #define PAD MAXBOUND*1.03
+#define NSYNC 1
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
 //execute using mpirun ./a.out <filename>
 //makefile not working
@@ -120,7 +121,11 @@ int main(int argc, char* argv[]) {
 	
 	size_t r_size = main_network->n_nodes * DIM * world_size;
 	float * R_buffer; 
-	R_buffer = (float*)malloc(main_network->n_nodes * DIM * world_size*sizeof(float));//buffer to gather the R from all nodes
+	R_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
+	float * forces_buffer; 
+	forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
+
+
 	int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 	// TODO: Sync forces every nth iteration
 
@@ -183,8 +188,13 @@ int main(int argc, char* argv[]) {
 
 		// //TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
 		// syncing R
 		if (world_rank == 0) {
+			if((iter+1)%NSYNC == 0){
+				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+			}
+
 			int node_to_sync  = 0;
 			for (int i = 0; i < world_size; i += 1) {
 				for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
@@ -195,6 +205,10 @@ int main(int argc, char* argv[]) {
 					else{
 						main_network->R[DIM * node_to_sync] = R_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
 						main_network->R[DIM * node_to_sync + 1] = R_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
+						if((iter+1)%NSYNC == 0){
+							main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
+							main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
+						}
 					}
 				}
 				// int i = (main_network->R[i]/chunk_size);
@@ -215,7 +229,7 @@ int main(int argc, char* argv[]) {
 			
 		}
 		//cout << __LINE__ << endl;
-		MPI_Barrier(MPI_COMM_WORLD);
+		//MPI_Barrier(MPI_COMM_WORLD);
 	}
 	//cout<<__LINE__<<endl;
 
