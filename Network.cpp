@@ -388,7 +388,7 @@ void Network::clear() {
 	free(rsideNodes);
 	free(tsideNodes);
 	free(bsideNodes);
-	free(moving_nodes);
+	free(not_moving_nodes);
 	delete[] chunk_nodes;
 	delete[] chunk_edges;
 }
@@ -513,15 +513,17 @@ void Network::load_network(string& fname) {
 		n_lside, n_rside, n_tside, n_bside, n_nodes);
 
 
-	// moving nodes
-	n_moving = n_nodes - n_tside - n_bside;
-	moving_nodes = (int*)malloc(sizeof(int)*n_moving);
+	// NOT moving nodes
+	n_not_moving = n_tside + n_bside;
+	not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
 	
 	int c = 0;
-	for(int i =0; i<n_nodes; i++){
-		if(!ismember(i, tsideNodes, n_tside) && !ismember(i, bsideNodes, n_bside)){
-			moving_nodes[c] = i;
-			c++;
+	for(int i =0; i<n_not_moving; i++){
+			if(i>n_tside){
+			not_moving_nodes[i] = bsideNodes[i-n_tside];
+		}
+		else{
+			not_moving_nodes[i] = tsideNodes[i];
 		}
 	}
 	//cout<<"We have "<<c<<" moving nodes\n";
@@ -560,7 +562,7 @@ void Network::copy(Network const & source) {
 	n_lside = source.n_lside;
 	n_bside = source.n_bside;
 	n_tside = source.n_tside;
-	n_moving = source.n_moving;
+	n_not_moving = source.n_not_moving;
 
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
@@ -576,7 +578,7 @@ void Network::copy(Network const & source) {
 	rsideNodes = (int* )malloc(n_rside*si);
 	bsideNodes = (int* )malloc(n_bside*si);
 	tsideNodes = (int* )malloc(n_tside*si);
-	moving_nodes = (int *)malloc(n_moving*si);
+	not_moving_nodes = (int *)malloc(n_not_moving*si);
 
 	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
 	edge_matrix = (bool**)malloc(n_nodes*sizeof(bool*));
@@ -605,8 +607,8 @@ void Network::copy(Network const & source) {
 	for (int i = 0; i < n_bside; i++) {
 		bsideNodes[i] = source.bsideNodes[i];
 	}
-	for (int i = 0; i < n_moving; i++) {
-		moving_nodes[i] = source.moving_nodes[i];
+	for (int i = 0; i < n_not_moving; i++) {
+		not_moving_nodes[i] = source.not_moving_nodes[i];
 	}
 
 	for (int i = 0; i < n_elems; i++) {
@@ -738,94 +740,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	// gnu.reset_plot();
 }
 
-// bool Network::get_forces(bool update_damage = false, int lo, int hi) {
-
-// 	bool BROKEN = false;
-// 	int node1, node2;
-// 	int j, k, id; // loop variables
-// 	float r1[DIM]; float r2[DIM] ;
-// 	float edge_force[DIM];
-// 	float rhat[DIM];
-// 	float s;
-// 	float force;
-
-
-// 	memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
-
-// 	for (j = 0; j < n_elems; j++){
-// 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
-// 		node1 = edges[j * 2]; 
-// 		node2 = edges[j * 2 + 1];
-		
-// 		// check if pair exists
-// 		if(node1 == -1 || node2 == -1) {
-// 			continue;
-// 		}
-// 		if ((node1 <= lo || node1 >= hi) && (node2 <= lo || node2 >= hi)) {
-// 			continue;
-// 		}
-
-// 		// read the positions
-// 		#pragma unroll
-// 		for(k = 0; k<DIM; k++){
-// 			r1[k] = R[node1*DIM + k]; 
-// 			r2[k] = R[node2*DIM + k];
-// 		}
-		
-// 		// check PBC_STATUS
-// 		if (PBC[j]) {
-// 			// add PBC_vector to get new node position
-// 			#pragma unroll
-// 			for (k = 0; k < DIM; k++){
-// 				r2[k] += PBC_vector[k];
-// 			}
-// 			// get force on node1 due to node2
-// 			s = dist(r1, r2);
-// 			unitvector(rhat, r1, r2);
-// 			force = force_wlc(s, L[j]);
-// 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
-// 			convert_to_vector(edge_force, force, rhat);
-// 			// subtract back the PBC_vector to get original node position
-// 			// #pragma unroll
-// 			// for (k = 0; k < DIM; k++){
-// 			// 	r2[k] -= PBC_vector[k];
-// 			// }
-// 		}
-// 		else{
-// 			s = dist(r1, r2);
-// 			unitvector(rhat, r1, r2);
-// 			force = force_wlc(s, L[j]);
-// 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
-// 			convert_to_vector(edge_force, force, rhat);
-// 		}
-// 		#pragma unroll
-// 		for (k = 0; k < DIM; k++){
-// 			forces[node1*DIM + k] -= edge_force[k];
-// 			forces[node2*DIM + k] += edge_force[k];
-// 		}
-// 		//update damage if needed
-// 		if (update_damage && (node1 < node2)){
-// 			damage[j] += kfe(force)*TIME_STEP;
-// 			//remove edge ... set to special value
-// 			if(damage[j] > 1.0){
-// 				cout<<"Breaking bond between "
-// 				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s = "<<force \
-// 				<<", "<<s<<endl;
-// 				for(int d = 0; d<DIM; d++){
-// 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
-// 				}
-// 				cout<<endl;
-// 				edges[j*2] = -1; edges[j*2+1] = -1;
-// 				BROKEN = true;
-// 			}
-
-// 		}
-// 	}
-// 	//printf("forces: %f\t%f\n", forces[4], forces[5]);
-// 	return BROKEN;
-// }
-
 void Network::get_forces(bool update_damage = false) {
+
+	
+
 
 	int node1, node2;
 	int j, k, l, id; // loop variables
@@ -836,8 +754,7 @@ void Network::get_forces(bool update_damage = false) {
 	float force;
 
 
-	//memset(&forces[DIM*lo], 0.0, (hi-lo + 1)*DIM*sizeof(float));
-	memset(forces, 0.0, n_elems*DIM*sizeof(float));
+	memset(forces, 0, n_nodes*DIM*sizeof(float));
 
 	
 	for (l = 0; l < chunk_edges_len; l++){
@@ -848,7 +765,6 @@ void Network::get_forces(bool update_damage = false) {
 		if(j==-1){
 			break;
 		}
-
 		node1 = edges[j * 2];
 		node2 = edges[(j * 2) + 1];
 		// check if pair exists
@@ -865,10 +781,6 @@ void Network::get_forces(bool update_damage = false) {
 		}
 
 
-		// if ((r1[0] < x_lo || r1[0] > x_hi || r1[1] < y_lo || r1[1] > y_hi) && (r2[0] < x_lo || r2[0] > x_hi || r2[1] < y_lo || r2[1] > y_hi))  {
-		// 	continue;
-		// }
-		
 
 
 		// check PBC_STATUS
@@ -881,12 +793,20 @@ void Network::get_forces(bool update_damage = false) {
 			// get force on node1 due to node2
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
+			// if (s>L[j]){
+			// 	cout<<"Something's wrong for edge "\
+			// 	<<j<< ", nodes "<<node1 << " - " <<\
+			// 	node2<<": s = "<<s<<", L = "<<L[j]<<"\n";
+			// }
 			force = force_wlc(s, L[j]);
 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		else{
 			s = dist(r1, r2);
+			// if (s>L[j]){
+			// 	cout<<"Something's wrong for edge "<<j<< ", nodes "<<node1 << " - " <<node2<<": s = "<<s<<", L = "<<L[j]<<"\n";
+			// }
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
@@ -903,7 +823,7 @@ void Network::get_forces(bool update_damage = false) {
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
 				cout<<"Breaking bond between "
-				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s = "<<force \
+				<<node1<<" and "<<node2<<" F,s = "<<force \
 				<<", "<<s<<endl;
 				for(int d = 0; d<DIM; d++){
 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
@@ -1107,42 +1027,20 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
-// void Network::optimize(bool& BROKEN, int lo, int hi, float eta, float alpha, int max_iter){
-// 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
-// 	float* delR = new float[n_moving*DIM]();
-// 	float g;
-// 	int id, d, node;
-// 	for(int step = 0; step < max_iter; step++){
-// 		get_forces(false, lo, hi);
-// 		for(int i=lo; i<hi; i++){
-// 		printf("%d:\t%f\t%f\n",i, forces[2*i],forces[2*i+1]);
-// 	}
-// 		if(getabsmax(forces,n_nodes*DIM)>TOL){
-// 			for(id = 0; id < n_moving; id++){
-// 				node = moving_nodes[id];
-// 				if(node>=lo && node<=hi){
-// 				#pragma unroll
-// 				for(d = 0; d<DIM; d++){
-// 					g = forces[DIM*node+d];
-// 					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
-// 					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
-// 					R[node*DIM + d] += delR[id*DIM + d];
-// 				}		
-// 			}}
-// 		}
-// 		else{
-// 			break;
-// 		}
-// 	}
-// 	BROKEN = get_forces(true);
-// 	delete[] rms_history;
-// 	delete[] delR;
-// }
+bool Network::notmoving(int nodeid){
+	bool init = false;
+	for(int i=0;i<n_not_moving;i++){
+		if(nodeid == not_moving_nodes[i]){
+			init = true;
+			break;
+		}
+	}
+	return init;
+}
 
 void Network::optimize(float eta, float alpha, int max_iter){
-	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
-	float* delR = new float[n_moving*DIM]();
-	float g;
+	float* rms_history = new float[n_nodes*DIM](); // () allows 0.0 initialization
+	float g, delR;
 	int id, d, node;
 	for(int step = 0; step < max_iter; step++){
 		get_forces(false);
@@ -1150,15 +1048,15 @@ void Network::optimize(float eta, float alpha, int max_iter){
 		if(getabsmax(forces,n_nodes*DIM)>TOL){
 			for(id = 0; id < chunk_nodes_len; id++){
 				node = chunk_nodes[id];
-				if (chunk_nodes[id] ==-1) {
+				if (chunk_nodes[id] ==-1 || notmoving(chunk_nodes[id])) {
 						continue;
 				}				
 				#pragma unroll
 					for(d = 0; d<DIM; d++){
 						g = forces[DIM*node+d];
-						rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
-						delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
-						R[node*DIM + d] += delR[id*DIM + d];
+						rms_history[id*DIM + d] = alpha*rms_history[id*DIM + d] + (1-alpha)*g*g;
+						delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
+						R[node*DIM + d] += delR;
 					}				
 			}
 		}
@@ -1167,7 +1065,7 @@ void Network::optimize(float eta, float alpha, int max_iter){
 		}
 	}
 	delete[] rms_history;
-	delete[] delR;
+
 }
 
 
@@ -1184,92 +1082,6 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	}
 }
 
-// void Network::split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank) {
-
-// 	int R_total = n_nodes * DIM;
-// 	int R_split_size = ceil(R_total/number_of_procs);
-
-// 	if (curr_proc_rank < number_of_procs-1) {
-
-// 		for (int i = curr_proc_rank*R_split_size, int j = 0; i < (curr_proc_rank+1)*(R_split_size); i++, j++) {
-// 			R_split[j] = R[i];
-// 		}
-
-// 	}
-// 	else if (curr_proc_rank == number_of_procs-1) {
-
-// 		for (int i = 0; )
-// 	}
-
-
-// }
-// template <typename t>
-// void write_to_file(string& fname, t* arr, int rows, int cols){
-
-// 	ofstream logger;
-// 	std::time_t result = std::time(nullptr);
-
-
-// 	cout<<"1D pulling of a 2D gel"<<endl;
-// 	cout<<"File created at "<<std::asctime(std::localtime(&result));
-// 	cout<<endl;
-
-// 	cout<<"Sim dimension : "<<DIM<<endl;
-// 	cout<<"Simulation time : "<<SIM_TIME<<endl;
-// 	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
-// 	cout<<endl;
-
-// 	cout<<"Disorder characteristics : "<<endl;
-// 	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
-// 	cout<<" -- L_STD : "<<L_STD<<endl;
-// 	cout<<endl;
-	
-// 	cout<<"Cracked? : "<<CRACKED<<endl;
-
-// 	logger.open(fname, ios::trunc|ios_base::out);
-// 	for(int i =0; i < rows; i++){
-// 		for(int j = 0; j< cols; j++){
-// 			logger<<arr[i*cols + j]<<"\t";
-// 		}
-// 		logger<<"\n";
-// 	}
-// }
-
-/**int main() {
-
-	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	string path = "./template2d.msh";
-	Network test_network(path);
-	float* plate_forces;
-
-	test_network.get_weight();
-	bool should_stop = test_network.get_stats();
-
-	if(should_stop){return 0;}
-
-	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
-	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
-
-	clock_t t = clock();
-	cout<<"\n Will run for "<<STEPS<<":\n";
-	for(int i = 0; i<STEPS; i++ ){
-		test_network.optimize();
-		test_network.move_top_plate();
-		test_network.get_plate_forces(plate_forces, i);
-		if((i+1)%100 == 0){
-			test_network.get_stats();
-			test_network.get_current_edges();
-			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
-			t = clock();  // reset clock
-		}
-	}
-
-	string fname = "forces_disorder_0.1.txt";
-	write_to_file<float>(fname, plate_forces, STEPS, DIM);
-
-	free(plate_forces);
-	return 0;
-}**/
 
 
 

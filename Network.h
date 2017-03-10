@@ -105,6 +105,7 @@ public:
 	float get_weight();
 	void set_weight(float weight);
 	void plotNetwork(int iter_step, bool first_time);
+	bool notmoving(int);
 
 //private:
 
@@ -130,8 +131,8 @@ public:
 	int* bsideNodes;
 	bool initialized;
 	//add moving nodes to speed up force
-	int* moving_nodes;
-	int n_moving;
+	int* not_moving_nodes;
+	int n_not_moving;
 	int * chunk_nodes;
 	int * chunk_edges;
 	int chunk_edges_len;

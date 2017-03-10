@@ -12,36 +12,12 @@
 #include <ctime>
 #include <chrono>
 
-
-//#include "input.h"
 #include "Network.h"
 #define PAD MAXBOUND*1.03
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
 //execute using mpirun ./a.out <filename>
 //makefile not working
 
-
-// #define DIM 2								// Number of dimensions
-// #define TIME_STEP 1e-4						// Time step
-// #define SIM_TIME 10.0						// Simulation time
-// #define TOL 1e-6							// Tolerance
-// #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-// #define L_MEAN 120.0f						// Average for contour length
-// #define L_STD 4.0f							// Std. deviation for contour lengths
-// #define Z_MAX 10							// Max coordination number
-// #define MAXBOUND 500.0f
-// #define CRACKED true
-
-// // Define constants
-// #define kB 1.38064852e-5					// Boltzmann constant
-// #define b 0.1								// Persistence length
-// #define T 300 								// Temperature
-// #define ae 0.1 								// Strength of bond - includes activation energy
-// #define delxe 0.15 							// parameter for breaking crosslink connection
-
-//static double vel[DIM] = {0.0, 100.0};
-
-//TODO: Define function 
 inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 	return (R[0] >= x_lo && R[0] < x_hi && R[1] >= y_lo && R[1] < y_hi);
 }
@@ -73,16 +49,16 @@ int main(int argc, char* argv[]) {
 	
 	float* plate_forces = NULL;
     
-	// main_network->get_weight();
-	// bool should_stop = main_network->get_stats();
-	// if(should_stop || world_size % 2 == 1) {
-	// 	//Always take even number of processors
-	// 	return 0;
-	// }
+	main_network->get_weight();
+	bool should_stop = main_network->get_stats();
+	if(should_stop || world_size % 2 == 1) {
+		//Always take even number of processors
+		return 0;
+	}
     
 	if (world_rank == 0) {
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
-		memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
+		memset(plate_forces, 0, STEPS*DIM*sizeof(float));
 	}
 	
 	int y_level = world_rank % 2 == 0? world_rank/2 : (world_rank-1)/2;
@@ -127,7 +103,6 @@ int main(int argc, char* argv[]) {
 			continue;
 		}
 		else {
-			// This is not correct logic: this would not add the counter point (b) for edge i (a,b)
 			main_network->chunk_edges[k] = i;
 			k++;
 		}
@@ -138,26 +113,20 @@ int main(int argc, char* argv[]) {
 	for ( ; k < main_network->chunk_edges_len; k++) {
 		main_network->chunk_edges[k] = -1;
 	}
-	//cout << __LINE__ << endl;
-	
-	//cout << __LINE__ << endl;
+
 	//uniform L and PBC across all processors
 	MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
-	cout << world_rank << "  "<<__LINE__ << endl;
-	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); //not sure if it is randomly generated.
-	// cout << world_rank << endl;
-	// cout << world_rank << "  "<<__LINE__ << endl;
-	size_t r_size = main_network->n_nodes * DIM * world_size;
+	MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); 
 	
-
+	size_t r_size = main_network->n_nodes * DIM * world_size;
 	float * R_buffer; 
 	R_buffer = (float*)malloc(main_network->n_nodes * DIM * world_size*sizeof(float));//buffer to gather the R from all nodes
-	cout << world_rank << "  "<<__LINE__ << endl;
 	int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
-	cout << world_rank << "  "<<__LINE__ << endl;
+	// TODO: Sync forces every nth iteration
+
 	MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
-	cout << world_rank << "  "<<__LINE__ << endl;
-	//TODO: chunk node uniqueness check : sum each and check total against sum of 1+2+3+...+n_nodes
+
+	// Uniqueness of partition check
 	if (world_rank == 0) {
 		int chunk_sum = 0;
 		for (int i = 0; i < main_network->chunk_nodes_len * world_size; i++) {
@@ -176,13 +145,12 @@ int main(int argc, char* argv[]) {
 		if (chunk_sum != (nn*nn - nn)/2 ) {
 			cout << chunk_sum << " | "<< (nn*nn - nn)/2<<endl; 
 			cout << "Uneven chunk partitioning" << endl;
-		      	//return 0;
+
 		}
 	}
 	
 	cout << "World rank proc "<<world_rank << " starting the loop:" << endl;
-	//bool * broken_buffer = new bool[world_size];
-	//int * edges_buffer = new int[main_network->n_elems * DIM * world_size];
+
 	int iter = 0; // needed to write forces later
 	clock_t t = clock(); 
 	for(iter = 0; iter<STEPS; iter++){
@@ -194,8 +162,9 @@ int main(int argc, char* argv[]) {
 				main_network->get_stats();
 			}
 		}
-		//cout <<  world_rank<< "  " <<__LINE__ << endl;
+		main_network->plotNetwork(iter, false);
 		main_network->optimize();
+		MPI_Barrier(MPI_COMM_WORLD);
 		//cout <<  world_rank<< "  " <<__LINE__ << endl;
 
 		// if (world_rank == 0) {
@@ -214,7 +183,6 @@ int main(int argc, char* argv[]) {
 
 		// //TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		
 		// syncing R
 		if (world_rank == 0) {
 			int node_to_sync  = 0;
@@ -233,8 +201,8 @@ int main(int argc, char* argv[]) {
 				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * i + i];
 				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
 			}
-			main_network->plotNetwork(iter, false);
-			//main_network->move_top_plate();
+			
+			main_network->move_top_plate();
 
 		}
 		
@@ -257,11 +225,8 @@ int main(int argc, char* argv[]) {
 		free(plate_forces);
 	}
 
-	// cout << __LINE__ << endl;
-	//
-	// cout << __LINE__ << endl;
 	free(R_buffer);
-	//MPI_Finalize();
+	MPI_Finalize();
 	return 1;
 }
 
