@@ -14,7 +14,7 @@
 
 #include "Network.h"
 #define PAD MAXBOUND*1.03
-#define NSYNC 1
+#define NSYNC 5
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
 //execute using mpirun ./a.out <filename>
 //makefile not working
@@ -241,8 +241,10 @@ int main(int argc, char* argv[]) {
 	// 			}
 	// 		}
 	// 	}
+	// 	main_network->get_plate_forces(plate_forces, STEPS);
+	// 	//main_network->move_top_plate();
 	// }
-	// main_network->move_top_plate();
+	
 
 
 	if (world_rank == 0) {
@@ -252,6 +254,8 @@ int main(int argc, char* argv[]) {
 	}
 
 	free(R_buffer);
+	free(forces_buffer);
+	free(chunk_nodes_buffer);
 	delete main_network;
 	main_network = NULL;
 	cout << "Made it to the end! Exiting Now." << endl;
