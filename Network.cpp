@@ -1,24 +1,3 @@
-// #define __params__	
-// #define DIM 2								// Number of dimensions
-// #define TIME_STEP 1e-4						// Time step
-// #define SIM_TIME 10.0						// Simulation time
-// #define TOL 1e-6							// Tolerance
-// #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-// #define L_MEAN 120.0f						// Average for contour length
-// #define L_STD 4.0f							// Std. deviation for contour lengths
-// #define Z_MAX 10							// Max coordination number
-// #define MAXBOUND 500.0f
-
-// // Define constants
-// #define __constants__
-
-// #define kB 1.38064852e-5					// Boltzmann constant
-// #define b 0.1								// Persistence length
-// #define T 300 								// Temperature
-// #define ae 0.1 								// Strength of bond - includes activation energy
-// #define delxe 0.15 							// parameter for breaking crosslink connection
-// #define BLOCK_SIZE 1024
-
 #include "Network.h"
 using namespace std;
 
@@ -37,7 +16,6 @@ void side_nodes(float* R,\
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bnodes[n_bside]=i; n_bside++;}
 		if(fabs(R[i*DIM + 1]-MAXBOUND)<TOL){tnodes[n_tside]=i; n_tside++;}
 	}
-	//cout << __LINE__ << endl;
 }
 
 inline int get_num_vertices(int elem_type){
@@ -126,7 +104,6 @@ void read_n(int& n_nodes, int& n_elems, string& fname){
 			int c = 0;
 			for(int i=0; i<num_lines; i++){
 				getline(source, line);
-				//cout<<line<<endl;
 				in_pos<<line;
 				in_pos>>id;
 				in_pos>>elem_type;
@@ -156,8 +133,6 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 
 	do{
 		getline(source, line);
-		//cout<<line<<"\n";
-		//cout<<read_n_elems;
 		if(line.find("$Nodes") != string::npos){
 			getline(source, line);
 			float r[3]; int id;
@@ -185,7 +160,6 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 
 	do{
 		getline(source, line);
-		//cout<<line<<"\n";
 		if(line.find("$Elements") != string::npos){
 			int id, elem_type;
 			int num_vertices, num_lines;
@@ -306,34 +280,6 @@ inline bool ismember(int item, int* array,size_t size){
 /*****Actual Class Functions ******/
 Network::Network() {
 
-	/**
-	DIM = 2;
-	cracked = false;
-	n_nodes = 1600;
-	n_elems = 11000;
-	n_rside = 0;
-	n_lside = 0;
-	n_bside = 0;
-	n_tside = 0;
-	R = new float[n_nodes * DIM];
-	forces = new float[n_nodes * DIM];
-	edges = new int[Z_MAX * n_nodes * 2];
-	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
-	lsideNodes = new int[max_nodes_on_a_side];
-	rsideNodes = new int[max_nodes_on_a_side];
-	tsideNodes = new int[max_nodes_on_a_side];
-	bsideNodes = new int[max_nodes_on_a_side];
-	damage = new float[2 * n_elems];
-	L = new float[2 * n_elems];
-	PBC = new bool[2 * n_elems];
-	edge_matrix = new bool*[n_elems];
-	for (int i = 0; i < n_elems; i++) {
-		edge_matrix[i] = new bool[i+1];
-		for (int j = 0; j <= i; i++) {
-			edge_matrix[i][j] = false;
-		}
-	}
-	**/
 	initialized = false;
 
 }
@@ -396,55 +342,12 @@ void Network::clear() {
 	cout << "Network Deleted successfully" << endl;
 }
 
-
-// void Network::clear() {
-
-// 	delete[] R;
-// 	R = NULL;
-// 	delete[] edges;
-// 	edges = NULL;
-// 	delete[] forces;
-// 	forces = NULL;
-// 	delete[] damage;
-// 	damage = NULL;
-
-// 	for (int i = 0; i < n_nodes; i++) {
-// 		delete[] edge_matrix[i];
-// 		edge_matrix[i] = NULL;
-// 	}
-// 	delete[] edge_matrix;
-// 	edge_matrix = NULL;
-// 	delete[] L;
-// 	L = NULL;
-// 	delete[] PBC;
-// 	PBC = NULL;
-// 	delete[] lsideNodes;
-// 	lsideNodes = NULL;
-// 	delete[] rsideNodes;
-// 	rsideNodes = NULL;
-// 	delete[] tsideNodes;
-// 	tsideNodes = NULL;
-// 	delete[] bsideNodes;
-// 	bsideNodes = NULL;
-
-// }
-
 void Network::build_network() {
 
-	
-	//num_edges = Z_MAX * n_nodes * 2;
 	/** TO-DO **/
 	
 }
 
-// TODO: Check what's wrong here
-// template <typename t>
-// void malloc_2d(t** array_2d, int r, int c){
-// 	array_2d = (t**)malloc(r*c*sizeof(t*));
-// 	for(int i=0; i< r; i++){
-// 		array_2d[i] = (t*)malloc(c*sizeof(t));
-// 	}
-// }
 
 void Network::malloc_network(string& fname){
 	
