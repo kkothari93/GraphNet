@@ -191,6 +191,9 @@ int main(int argc, char* argv[]) {
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		if((iter+1)%NSYNC == 0){
 			MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+			if (world_rank == 0) {
+				cout << "Synced forces" << endl;
+			}
 		}
 		// syncing R
 		if (world_rank == 0) {
@@ -231,6 +234,25 @@ int main(int argc, char* argv[]) {
 		//MPI_Barrier(MPI_COMM_WORLD);
 	}
 	//cout<<__LINE__<<endl;
+	//sync forces at the end??
+	// MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	// if (world_rank == 0) {
+	// 	int node_to_sync  = 0;
+	// 	for (int i = 0; i < world_size; i += 1) {
+	// 		for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
+	// 			node_to_sync = chunk_nodes_buffer[j];
+	// 			if (node_to_sync == -1) {
+	// 				break;
+	// 			}
+	// 			else{
+	// 				main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
+	// 				main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
+	// 			}
+	// 		}
+	// 	}
+	// }
+	// main_network->move_top_plate();
+
 
 	if (world_rank == 0) {
 		string file_name = "forcesMPI.txt";
@@ -239,9 +261,12 @@ int main(int argc, char* argv[]) {
 	}
 
 	free(R_buffer);
-	cout << "Made it to the end!" << endl;
+	delete main_network;
+	main_network = NULL;
+	cout << "Made it to the end! Exiting Now." << endl;
 	MPI_Finalize();
-	return 1;
+	return 0;
+	//return 1;
 }
 
 /**

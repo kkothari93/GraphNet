@@ -373,6 +373,7 @@ Network const & Network::operator=(Network const & other) {
 
 void Network::clear() {
 
+	//cout << __LINE__ << endl;
 	free(R);
 	free(edges);
 	free(forces);
@@ -381,7 +382,7 @@ void Network::clear() {
 	// for (int i = 0; i < n_nodes; i++) {
 	// 	free(edge_matrix[i]);
 	// }
-	free(edge_matrix);
+	//free(edge_matrix);
 	free(L);
 	free(PBC);
 	free(lsideNodes);
@@ -389,8 +390,10 @@ void Network::clear() {
 	free(tsideNodes);
 	free(bsideNodes);
 	free(not_moving_nodes);
+	//cout << __LINE__ << endl;
 	delete[] chunk_nodes;
 	delete[] chunk_edges;
+	cout << "Network Deleted successfully" << endl;
 }
 
 
@@ -469,10 +472,10 @@ void Network::malloc_network(string& fname){
 	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
 
 	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
-	edge_matrix = (bool**)malloc(n_nodes*n_nodes*sizeof(bool*));
-	for(int i = 0; i<n_nodes; i++){
-		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
-	}
+	//edge_matrix = (bool**)malloc(n_nodes*n_nodes*sizeof(bool*));
+	// for(int i = 0; i<n_nodes; i++){
+	// 	edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
+	// }
 
 	// 	initialise n_xside for side nodes
 	n_rside = 0;
@@ -519,7 +522,7 @@ void Network::load_network(string& fname) {
 	
 	int c = 0;
 	for(int i =0; i<n_not_moving; i++){
-			if(i>n_tside){
+		if(i>n_tside){
 			not_moving_nodes[i] = bsideNodes[i-n_tside];
 		}
 		else{
@@ -536,17 +539,17 @@ void Network::load_network(string& fname) {
 	cout<<"Number after new connections made: "<<n_elems<<endl;
 
 	
-	for (int i = 0; i < n_elems; i++) {
-		int node1 = edges[2*i];
-		int node2 = edges[2*i + 1];
-		if(node1 == -1 || node2 == -1){
-			continue;
-		}
-		else if (node1 < node2) {
-			edge_matrix[node1][node2] = true;
-		}
+	// for (int i = 0; i < n_elems; i++) {
+	// 	int node1 = edges[2*i];
+	// 	int node2 = edges[2*i + 1];
+	// 	if(node1 == -1 || node2 == -1){
+	// 		continue;
+	// 	}
+	// 	else if (node1 < node2) {
+	// 		edge_matrix[node1][node2] = true;
+	// 	}
 
-	}
+	// }
 
 
 
@@ -581,10 +584,10 @@ void Network::copy(Network const & source) {
 	not_moving_nodes = (int *)malloc(n_not_moving*si);
 
 	// malloc_2d<bool>(edge_matrix, n_nodes, n_nodes);
-	edge_matrix = (bool**)malloc(n_nodes*sizeof(bool*));
-	for(int i = 0; i<n_nodes; i++){
-		edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
-	}
+	//edge_matrix = (bool**)malloc(n_nodes*sizeof(bool*));
+	// for(int i = 0; i<n_nodes; i++){
+	// 	edge_matrix[i] = (bool*)malloc((i+1)*sizeof(bool));
+	// }
 
 	for (int i = 0; i < n_nodes * DIM; i++) {
 		R[i] = source.R[i];
@@ -617,17 +620,17 @@ void Network::copy(Network const & source) {
 		PBC[i] = source.PBC[i];
 	}
 
-	for (int i = 0; i < n_elems; i++) {
-		int node1 = edges[2*i];
-		int node2 = edges[2*i + 1];
-		if(node1 == -1 || node2 == -1){
-			continue;
-		}
-		else if (node1 < node2) {
-			edge_matrix[node1][node2] = true;
-		}
+	// for (int i = 0; i < n_elems; i++) {
+	// 	int node1 = edges[2*i];
+	// 	int node2 = edges[2*i + 1];
+	// 	if(node1 == -1 || node2 == -1){
+	// 		continue;
+	// 	}
+	// 	else if (node1 < node2) {
+	// 		edge_matrix[node1][node2] = true;
+	// 	}
 
-	}
+	// }
 
 }
 
