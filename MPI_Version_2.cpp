@@ -27,8 +27,6 @@ inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 
 int main(int argc, char* argv[]) {
 
-	
-	
 	MPI_Init(NULL, NULL);
 
   	// Get the number of processes
@@ -86,8 +84,6 @@ int main(int argc, char* argv[]) {
 	for (; k < main_network->chunk_nodes_len; k++) {
 		main_network->chunk_nodes[k] = -1;
 	}
-
-	
 
 
 
@@ -167,27 +163,13 @@ int main(int argc, char* argv[]) {
 				main_network->get_stats();
 			}
 		}
-		cout << world_rank << " " << __LINE__ << " iter: " << iter << endl;
-		main_network->plotNetwork(iter, false);
+		// main_network->plotNetwork(iter, false);
 		main_network->optimize();
 		MPI_Barrier(MPI_COMM_WORLD);
-		//cout <<  world_rank<< "  " <<__LINE__ << endl;
-
-		// if (world_rank == 0) {
-		// 	for(int i = 0; i<main_network->chunk_nodes_len; i++){
-		// 		if(main_network->chunk_nodes[i] != -1){
-		// 						cout<<main_network->chunk_nodes[i]<<"\t"<<main_network->R[main_network->chunk_nodes[i]*DIM + 0]<<endl;
-		// 						cout<<main_network->chunk_nodes[i]<<"\t"<<main_network->R[main_network->chunk_nodes[i]*DIM + 1]<<endl;}
-		// 	}
-		// }
-		// //TODO: use Network::get_plate_forces() on root proc
-		// //MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 
-		// //MPI_Barrier(MPI_COMM_WORLD);
 
-
-		// //TODO: check the size of array parameter
+		//TODO: check the size of array parameter
 		MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		if((iter+1)%NSYNC == 0){
 			MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
@@ -212,7 +194,7 @@ int main(int argc, char* argv[]) {
 				}
 				// int i = (main_network->R[i]/chunk_size);
 				// main_network->R[i] = R_buffer[main_network->n_nodes * DIM * i + i];
-				//main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
+				// main_network->forces[i] = forces_buffer[main_network->n_nodes * DIM * i + i];
 			}
 			
 			main_network->move_top_plate();
@@ -221,16 +203,13 @@ int main(int argc, char* argv[]) {
 		
 		MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-		//cout << __LINE__ << endl;
 		if (world_rank == 0) {
 			main_network->get_plate_forces(plate_forces, iter);
 			//main_network->get_stats();
 			
 		}
-		//cout << __LINE__ << endl;
 		//MPI_Barrier(MPI_COMM_WORLD);
 	}
-	//cout<<__LINE__<<endl;
 
 	if (world_rank == 0) {
 		string file_name = "forcesMPI.txt";
@@ -243,20 +222,3 @@ int main(int argc, char* argv[]) {
 	MPI_Finalize();
 	return 1;
 }
-
-/**
-int main(int argc, char* argv[]) {
-	MPI_Init(NULL, NULL);
-	// Get the number of processes
-  	int world_size;
-  	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  	cout << world_size << endl;
-  	// Get the rank of the process
-  	int world_rank;
-  	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-  	string fname = "template2d.msh";
-  	Network main_network(fname);
-  	//delete main_network;
-	MPI_Finalize();
-}
-**/
