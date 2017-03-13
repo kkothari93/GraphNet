@@ -19,22 +19,21 @@
 #include "gnuplot_i.hpp"
 using namespace std;
 
-//TODO: Check sanctity of edges! 
 
 #define __params__	
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 8.0						// Simulation time
+#define SIM_TIME 9.0						// Simulation time
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-#define L_MEAN 240.0f						// Average for contour length
-#define L_STD 100.0f							// Std. deviation for contour lengths
-#define Z_MAX 10							// Max coordination number
+#define L_MEAN 250.0f						// Average for contour length
+#define L_STD 150.0f							// Std. deviation for contour lengths
 #define MAXBOUND 500.0f
 #define SACBONDS false
 #define IMPLEMENT_PBC true
-#define FNAME_STRING "zero_disorder_high_L_"
+#define FNAME_STRING "high_disorder_high_L_"
 #define CRACKED false
+//#define GENERATOR std::uniform_real_distribution<float>(L_MEAN - L_STD, L_MEAN + L_STD
 #if CRACKED
 #define PROB_REMOVAL 0.8
 #else
@@ -710,7 +709,7 @@ void Network::get_forces(bool update_damage = false) {
 void Network::make_edge_connections(float dely_allowed) {
 
 	std::default_random_engine seed;
-	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
 	int nl, nr, lnode, rnode;
 	for(nl= 0; nl < n_lside; nl++){
 		lnode = lsideNodes[nl];
