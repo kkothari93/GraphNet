@@ -14,7 +14,7 @@
 
 #include "Network.h"
 #define PAD MAXBOUND*1.03
-#define NSYNC 5
+#define NSYNC 1
 //compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
 //execute using mpirun ./a.out <filename>
 //makefile not working
@@ -226,24 +226,24 @@ int main(int argc, char* argv[]) {
 	}
 	//cout<<__LINE__<<endl;
 	//sync forces at the end??
-	// MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-	// if (world_rank == 0) {
-	// 	int node_to_sync  = 0;
-	// 	for (int i = 0; i < world_size; i += 1) {
-	// 		for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
-	// 			node_to_sync = chunk_nodes_buffer[j];
-	// 			if (node_to_sync == -1) {
-	// 				break;
-	// 			}
-	// 			else{
-	// 				main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
-	// 				main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
-	// 			}
-	// 		}
-	// 	}
-	// 	main_network->get_plate_forces(plate_forces, STEPS);
-	// 	//main_network->move_top_plate();
-	// }
+	MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	if (world_rank == 0) {
+		int node_to_sync  = 0;
+		for (int i = 0; i < world_size; i += 1) {
+			for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
+				node_to_sync = chunk_nodes_buffer[j];
+				if (node_to_sync == -1) {
+					break;
+				}
+				else{
+					main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
+					main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
+				}
+			}
+		}
+		main_network->get_plate_forces(plate_forces, STEPS);
+		//main_network->move_top_plate();
+	}
 	
 
 
@@ -251,11 +251,15 @@ int main(int argc, char* argv[]) {
 		string file_name = "forcesMPI.txt";
 		write_to_file<float>(file_name, plate_forces, STEPS, DIM);
 		free(plate_forces);
+		plate_forces = NULL;
 	}
 
 	free(R_buffer);
+	R_buffer = NULL;
 	free(forces_buffer);
+	forces_buffer = NULL;
 	free(chunk_nodes_buffer);
+	chunk_nodes_buffer = NULL;
 	delete main_network;
 	main_network = NULL;
 	cout << "Made it to the end! Exiting Now." << endl;

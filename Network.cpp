@@ -65,6 +65,7 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 
 	}
 	delete[] local_nodes;
+	local_nodes = NULL;
 }
 
 void mapping(int& edge_counter, int elem_type){
@@ -321,24 +322,37 @@ void Network::clear() {
 
 	//cout << __LINE__ << endl;
 	free(R);
+	R = NULL;
 	free(edges);
+	edges = NULL;
 	free(forces);
+	forces = NULL;
 	free(damage);
+	damage = NULL;
 
 	// for (int i = 0; i < n_nodes; i++) {
 	// 	free(edge_matrix[i]);
 	// }
 	//free(edge_matrix);
 	free(L);
+	L = NULL;
 	free(PBC);
+	PBC = NULL;
 	free(lsideNodes);
+	lsideNodes = NULL;
 	free(rsideNodes);
+	rsideNodes = NULL;
 	free(tsideNodes);
+	tsideNodes = NULL;
 	free(bsideNodes);
+	bsideNodes = NULL;
 	free(not_moving_nodes);
+	not_moving_nodes = NULL;
 	//cout << __LINE__ << endl;
 	delete[] chunk_nodes;
+	chunk_nodes = NULL;
 	delete[] chunk_edges;
+	chunk_edges = NULL;
 	cout << "Network Deleted successfully" << endl;
 }
 
@@ -971,6 +985,7 @@ void Network::optimize(float eta, float alpha, int max_iter){
 		}
 	}
 	delete[] rms_history;
+	rms_history = NULL;
 
 }
 
