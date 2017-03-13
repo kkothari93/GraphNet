@@ -3,7 +3,7 @@ OBJS = MPI_Version_2.o Network.o Crack.o
 
 MPICC = mpic++
 MPIFLAGS = -std=c++11 
-LD = clang++
+LD = g++
 CFLAGS = -std=c++11 -c 
 OFLAGS = -std=c++11 -o
 

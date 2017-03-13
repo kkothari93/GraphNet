@@ -237,7 +237,7 @@ int main(int argc, char* argv[]) {
 		free(plate_forces);
 		plate_forces = NULL;
 	}
-
+	// Needed to not have double free, corruption error
 	free(R_buffer);
 	R_buffer = NULL;
 	free(forces_buffer);
