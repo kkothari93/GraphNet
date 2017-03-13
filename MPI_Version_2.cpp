@@ -15,9 +15,8 @@
 #include "Network.h"
 #define PAD MAXBOUND*1.03
 #define NSYNC 1
-//compile using: mpic++ MPI\ Version.cpp Network.h Network.cpp crack.h Crack.cpp
-//execute using mpirun ./a.out <filename>
-//makefile not working
+//compile using: make
+//execute using mpirun -np <no. of processors> ./dotnet <filename>
 
 inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 	return (R[0] >= x_lo && R[0] < x_hi && R[1] >= y_lo && R[1] < y_hi);
@@ -27,26 +26,19 @@ inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 
 int main(int argc, char* argv[]) {
 
-	
-	
 	MPI_Init(NULL, NULL);
-
-  	// Get the number of processes
+	
+	// Get the number of processes
   	int world_size;
   	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-  	//cout << world_size << endl;
   	// Get the rank of the process
   	int world_rank;
   	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-  	
-
   	Network * main_network = NULL;
-  	string fname = "template2d.msh";
-  	//fname = argv[1];
-  	//TODO: char[] vs string --> test small snippet
+  	string fname = "template2d.msh"; //default
+  	fname = argv[1];
 	main_network = new Network(fname);
-	int chunk_size = ceil((main_network->n_nodes * 2)/world_size);
 	
 	float* plate_forces = NULL;
     
@@ -70,11 +62,9 @@ int main(int argc, char* argv[]) {
 
 
 	//put them in a chunk specific array:
-	// changed from /2 to *2
 	main_network->chunk_nodes_len = main_network->n_nodes/world_size + sqrt(main_network->n_nodes)*2; 
 	main_network->chunk_nodes = new int[main_network->chunk_nodes_len];
 	int k = 0, n_chunk_nodes;
-	// changed from i+=DIM to i+=1, use Rinset
 	for (int i = 0; i < main_network->n_nodes; i+=1) {
 		if (Rinset(&(main_network->R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			main_network->chunk_nodes[k] = i;
@@ -86,10 +76,6 @@ int main(int argc, char* argv[]) {
 	for (; k < main_network->chunk_nodes_len; k++) {
 		main_network->chunk_nodes[k] = -1;
 	}
-
-	
-
-
 
 	//moved *DIM from chunk_edges_len calc to new int [] declaration, also changed /2 to *2
 	main_network->chunk_edges_len = main_network->n_elems/world_size + sqrt(main_network->n_elems)*5;
@@ -124,8 +110,6 @@ int main(int argc, char* argv[]) {
 	R_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
 	float * forces_buffer; 
 	forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
-
-
 	int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 	// TODO: Sync forces every nth iteration
 
