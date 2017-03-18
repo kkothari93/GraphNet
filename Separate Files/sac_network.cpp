@@ -21,7 +21,9 @@ void sacNetwork::clear() {
 	// free(forces);
 	// free(damage);
 	free(sacdamage);
+	sacdamage = NULL;
 	free(m);
+	m = NULL;
 	// free(L);
 	// free(PBC);
 	// free(lsideNodes);
@@ -126,39 +128,11 @@ void sacNetwork::get_forces(bool update_damage = false) {
 
 void sacNetwork::malloc_network(string& fname){
 	
-	read_n(n_nodes, n_elems, fname);
-
-
-	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
-	// add memory for side connections
-	n_elems += 3*max_nodes_on_a_side;
-
+	Network::malloc_network(fname);
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
-	size_t sb = sizeof(bool);
-
-	R = (float*)malloc(n_nodes*DIM*sf);
-	edges = (int*)malloc(n_elems*2*si);
-	forces = (float*)malloc(n_nodes*DIM*sf);
-	damage = (float*)malloc(n_elems*sf);
-	sacdamage = (float*)malloc(n_elems*sf);
 	m = (int*)malloc(n_elems*si);
 	L = (float* )malloc(n_elems*sf);
-	PBC = (bool* )malloc(n_elems*sb);
-	lsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	rsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	bsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-
-
-	// 	initialise n_xside for side nodes
-	n_rside = 0;
-	n_lside = 0;
-	n_bside = 0;
-	n_tside = 0;
-
-	// adjust n_elems back to actual
-	n_elems -= 3*max_nodes_on_a_side;
 }
 
 void sacNetwork::load_network(string& fname) {

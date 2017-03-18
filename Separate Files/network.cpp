@@ -41,16 +41,27 @@ Network const & Network::operator=(Network const & other) {
 void Network::clear() {
 
 	free(R);
+	R = NULL;
 	free(edges);
+	edges = NULL;
 	free(forces);
+	forces = NULL;
 	free(damage);
+	damage = NULL;
 	free(L);
+	L = NULL;
 	free(PBC);
+	PBC = NULL;
 	free(lsideNodes);
+	lsideNodes = NULL;
 	free(rsideNodes);
+	rsideNodes = NULL;
 	free(tsideNodes);
+	tsideNodes = NULL;
 	free(bsideNodes);
+	bsideNodes = NULL;
 	free(moving_nodes);
+	moving_nodes = NULL;
 
 }
 

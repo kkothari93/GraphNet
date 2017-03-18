@@ -68,20 +68,20 @@ public:
 	Network(string& fname);
 	virtual ~Network();
 	Network const & operator=(Network const & other);
-	void build_network();
+	virtual void build_network();
 	void apply_crack(Cracklist &);
-	void load_network(string&);
-	void malloc_network(string&);
+	virtual void load_network(string&);
+	virtual void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
-	void get_forces(bool);
-	void move_top_plate();
-	void get_plate_forces(float*, int);
-	void optimize(float, float, int);
+	virtual void get_forces(bool);
+	virtual void move_top_plate();
+	virtual void get_plate_forces(float*, int);
+	virtual void optimize(float, float, int);
 	float get_weight();
 	float set_weight(float);
 	bool get_stats();
 	int get_current_edges();
-	void plotNetwork(int, bool);
+	virtual void plotNetwork(int, bool);
 
 protected:
 
