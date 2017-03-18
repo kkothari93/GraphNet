@@ -32,15 +32,14 @@ public:
 	MPI_Network(Network const & source);
 	MPI_Network(sacNetwork const & source);
 	~MPI_Network();
-	void copy();
+	void copy(MPI_Network const & source);
 	void clear();
-	void malloc_network();
+	//void malloc_network();
 	void load_network();
 	void get_forces(bool);
 	void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
-	bool notmoving(int);
-	void clear();
-	void copy(MPI_Network const & source);
+	void init_MPI(int world_rank, int world_size);
+	bool notmoving(int nodeid);
 
 
 	int* not_moving_nodes;
