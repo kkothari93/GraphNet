@@ -22,16 +22,16 @@ using namespace std;
 
 #define __params__	
 #define DIM 2								// Number of dimensions
-#define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 9.0						// Simulation time
+#define TIME_STEP 1e-2						// Time step
+#define SIM_TIME 100.0						// Simulation time
 #define TOL 1e-6							// Tolerance
 #define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 250.0f						// Average for contour length
-#define L_STD 150.0f							// Std. deviation for contour lengths
+#define L_STD 150.0f						// Std. deviation for contour lengths
 #define MAXBOUND 500.0f
 #define SACBONDS false
 #define IMPLEMENT_PBC true
-#define FNAME_STRING "high_disorder_high_L_"
+#define FNAME_STRING "damage_sbyL_reducedtsby10_"
 #define CRACKED false
 //#define GENERATOR std::uniform_real_distribution<float>(L_MEAN - L_STD, L_MEAN + L_STD
 #if CRACKED
@@ -690,7 +690,7 @@ void Network::get_forces(bool update_damage = false) {
 		}
 		//update damage if needed
 		if (update_damage){
-			damage[j] += kfe(force)*TIME_STEP;
+			damage[j] = s/L[j]/0.90;
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
 				cout<<"Breaking bond between "
