@@ -83,9 +83,9 @@ public:
 	int get_current_edges();
 	virtual void plotNetwork(int, bool);
 
-protected:
+//protected:
 
-	void clear();
+	virtual void clear();
 	void copy(Network const & source);
 	Gnuplot gnu;
 	bool cracked;
