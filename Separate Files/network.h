@@ -2,7 +2,7 @@
 #define NETWORK_H
 #include <iostream>
 #include <cmath>
-#include "Crack.cpp"
+#include "crack.h"
 #include <cstdlib>
 #include <math.h>
 #include <random>
@@ -18,7 +18,7 @@
 #include <cstring>
 #include <stddef.h>
 #include "vel.h"
-#include "gnuplot_i.hpp"
+//#include "gnuplot_i.hpp"
 #include "helper_funcs.cpp"
 using namespace std;
 
@@ -36,6 +36,7 @@ using namespace std;
 #define IMPLEMENT_PBC true
 #define FNAME_STRING "high_disorder_high_L_"
 #define CRACKED false
+#define PAD MAXBOUND*1.03
 //#define GENERATOR std::uniform_real_distribution<float>(L_MEAN - L_STD, L_MEAN + L_STD
 #if CRACKED
 #define PROB_REMOVAL 0.8
@@ -76,7 +77,7 @@ public:
 	virtual void get_forces(bool);
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
-	virtual void optimize(float, float, int);
+	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	float get_weight();
 	float set_weight(float);
 	bool get_stats();
@@ -87,7 +88,7 @@ public:
 
 	virtual void clear();
 	void copy(Network const & source);
-	Gnuplot gnu;
+	//Gnuplot gnu;
 	bool cracked;
 	//int DIM;
 	int n_nodes;

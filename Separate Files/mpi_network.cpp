@@ -133,8 +133,8 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			k++;
 		}
 	}
-	for (; k < main_network->chunk_nodes_len; k++) {
-		main_network->chunk_nodes[k] = -1;
+	for (; k < chunk_nodes_len; k++) {
+		chunk_nodes[k] = -1;
 	}
 	chunk_edges_len = n_elems/world_size + sqrt(n_elems)*5;
 	chunk_edges = new int[chunk_edges_len];
@@ -252,7 +252,7 @@ void MPI_Network::get_forces(bool update_damage = false) {
 
 }
 
-bool Network::notmoving(int nodeid){
+bool MPI_Network::notmoving(int nodeid){
 	bool init = false;
 	for(int i=0;i<n_not_moving;i++){
 		if(nodeid == not_moving_nodes[i]){

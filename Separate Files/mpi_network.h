@@ -2,7 +2,6 @@
 #define MPI_NETWORK_H
 #include <iostream>
 #include <cmath>
-#include "Crack.cpp"
 #include <cstdlib>
 #include <math.h>
 #include <random>
@@ -17,8 +16,8 @@
 #include <string>
 #include <cstring>
 #include <stddef.h>
-#include "vel.h"
-#include "gnuplot_i.hpp"
+// #include "vel.h"
+// #include "gnuplot_i.hpp"
 #include "network.h"
 #include "sac_network.h"
 using namespace std;
@@ -35,7 +34,7 @@ public:
 	void copy(MPI_Network const & source);
 	void clear();
 	//void malloc_network();
-	void load_network();
+	void load_network(string& fname);
 	void get_forces(bool);
 	void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void init_MPI(int world_rank, int world_size);

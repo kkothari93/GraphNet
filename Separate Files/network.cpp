@@ -465,22 +465,22 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	f.close();
 	}
 	//Plot to h
-	stringstream convert;
-	convert<<"[-100:"<<MAXBOUND+100<<"]";
-	string xrange = convert.str();
-	gnu.cmd("set xrange " + xrange);
-	gnu.cmd("load 'viridis.pal'");
-	gnu.cmd("set key off");
-	gnu.cmd("set colorbox default vertical");
-	gnu.cmd("set cbrange [0:1]");
-	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
-	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
-		std::to_string(iter_step)+"'");
-	gnu.cmd("set term png size 1200,900");
-	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
-	gnu.cmd("replot");
-	gnu.cmd("set term x11");
-	gnu.reset_plot();
+	// stringstream convert;
+	// convert<<"[-100:"<<MAXBOUND+100<<"]";
+	// string xrange = convert.str();
+	// gnu.cmd("set xrange " + xrange);
+	// gnu.cmd("load 'viridis.pal'");
+	// gnu.cmd("set key off");
+	// gnu.cmd("set colorbox default vertical");
+	// gnu.cmd("set cbrange [0:1]");
+	// gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
+	// gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
+	// 	std::to_string(iter_step)+"'");
+	// gnu.cmd("set term png size 1200,900");
+	// gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
+	// gnu.cmd("replot");
+	// gnu.cmd("set term x11");
+	// gnu.reset_plot();
 }
 
 int Network::get_current_edges(){
@@ -625,7 +625,7 @@ void Network::move_top_plate(){
 	}
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
+void Network::optimize(float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float g, delR;
 	char p;
