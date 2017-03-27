@@ -34,7 +34,7 @@ public:
 	void copy(MPI_Network const & source);
 	void clear();
 	//void malloc_network();
-	void load_network();
+	void load_network(string& fname);
 	void get_forces(bool);
 	void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void init_MPI(int world_rank, int world_size);

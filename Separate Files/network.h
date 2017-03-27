@@ -18,7 +18,7 @@
 #include <cstring>
 #include <stddef.h>
 #include "vel.h"
-#include "gnuplot_i.hpp"
+//#include "gnuplot_i.hpp"
 #include "helper_funcs.cpp"
 using namespace std;
 
@@ -36,6 +36,7 @@ using namespace std;
 #define IMPLEMENT_PBC true
 #define FNAME_STRING "high_disorder_high_L_"
 #define CRACKED false
+#define PAD MAXBOUND*1.03
 //#define GENERATOR std::uniform_real_distribution<float>(L_MEAN - L_STD, L_MEAN + L_STD
 #if CRACKED
 #define PROB_REMOVAL 0.8
@@ -87,7 +88,7 @@ public:
 
 	virtual void clear();
 	void copy(Network const & source);
-	Gnuplot gnu;
+	//Gnuplot gnu;
 	bool cracked;
 	//int DIM;
 	int n_nodes;
