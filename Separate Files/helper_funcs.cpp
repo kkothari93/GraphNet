@@ -15,7 +15,7 @@
 #include <cstring>
 #include <stddef.h>
 #include "vel.h"
-#include "gnuplot_i.hpp"
+//#include "gnuplot_i.hpp"
 using namespace std;
 
 #define __params__	

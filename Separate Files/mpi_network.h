@@ -16,8 +16,8 @@
 #include <string>
 #include <cstring>
 #include <stddef.h>
-#include "vel.h"
-#include "gnuplot_i.hpp"
+// #include "vel.h"
+// #include "gnuplot_i.hpp"
 #include "network.h"
 #include "sac_network.h"
 using namespace std;
