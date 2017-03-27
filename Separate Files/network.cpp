@@ -625,7 +625,7 @@ void Network::move_top_plate(){
 	}
 }
 
-void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
+void Network::optimize(float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float g, delR;
 	char p;

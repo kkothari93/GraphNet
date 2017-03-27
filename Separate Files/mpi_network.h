@@ -2,7 +2,6 @@
 #define MPI_NETWORK_H
 #include <iostream>
 #include <cmath>
-#include "Crack.cpp"
 #include <cstdlib>
 #include <math.h>
 #include <random>

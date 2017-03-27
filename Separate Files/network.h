@@ -2,7 +2,7 @@
 #define NETWORK_H
 #include <iostream>
 #include <cmath>
-#include "Crack.cpp"
+#include "crack.h"
 #include <cstdlib>
 #include <math.h>
 #include <random>
@@ -76,7 +76,7 @@ public:
 	virtual void get_forces(bool);
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
-	virtual void optimize(float, float, int);
+	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	float get_weight();
 	float set_weight(float);
 	bool get_stats();
