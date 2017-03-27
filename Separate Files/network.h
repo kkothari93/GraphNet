@@ -2,7 +2,6 @@
 #define NETWORK_H
 #include <iostream>
 #include <cmath>
-#include "crack.h"
 #include <cstdlib>
 #include <math.h>
 #include <random>
@@ -18,44 +17,9 @@
 #include <cstring>
 #include <stddef.h>
 #include "vel.h"
-//#include "gnuplot_i.hpp"
-#include "helper_funcs.cpp"
-using namespace std;
 
-
-#define __params__	
-#define DIM 2								// Number of dimensions
-#define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 9.0						// Simulation time
-#define TOL 1e-6							// Tolerance
-#define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
-#define L_MEAN 250.0f						// Average for contour length
-#define L_STD 150.0f							// Std. deviation for contour lengths
-#define MAXBOUND 500.0f
-#define SACBONDS false
-#define IMPLEMENT_PBC true
-#define FNAME_STRING "high_disorder_high_L_"
-#define CRACKED false
-#define PAD MAXBOUND*1.03
-//#define GENERATOR std::uniform_real_distribution<float>(L_MEAN - L_STD, L_MEAN + L_STD
-#if CRACKED
-#define PROB_REMOVAL 0.8
-#else
-#define PROB_REMOVAL 0.0
-#endif
-
-
-// Define constants
-#define __constants__
-
-#define kB 1.38064852e-5					// Boltzmann constant
-#define b 0.1								// Persistence length
-#define T 300 								// Temperature
-#define ae 0.1 								// Strength of bond - includes activation energy
-#define delxe 0.15 							// parameter for breaking crosslink connection
-#define af 0.3
-#define delxf 0.25
-
+#include "helper_funcs.h"
+#include "crack.h"
 using namespace std;
 
 const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
@@ -88,13 +52,11 @@ public:
 
 	virtual void clear();
 	void copy(Network const & source);
-	//Gnuplot gnu;
 	bool cracked;
 	//int DIM;
 	int n_nodes;
 	int n_elems;
 	int n_rside, n_lside, n_bside, n_tside;
-	//int num_edges;
 	float * R; //n_nodes*DIM
 	int * edges; //n_elems*2
 	float * forces; //n_nodes*DIM
