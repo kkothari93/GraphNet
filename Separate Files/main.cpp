@@ -14,6 +14,7 @@
 #include <string>
 #include <cstring>
 #include <stddef.h>
+#include <mpi.h>
 
 #include "mpi_network.h"
 using namespace std;

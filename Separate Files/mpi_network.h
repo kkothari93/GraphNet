@@ -20,6 +20,8 @@
 #include "sac_network.h"
 using namespace std;
 
+#define NSYNC 100
+
 class MPI_Network : public Network {
 
 public:
