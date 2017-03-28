@@ -21,7 +21,6 @@ using namespace std;
 #define USE_MPI false
 
 
-
 int main() {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
