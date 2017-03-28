@@ -16,7 +16,6 @@
 #include <string>
 #include <cstring>
 #include <stddef.h>
-
 #include "network.h"
 #include "sac_network.h"
 using namespace std;
@@ -46,6 +45,10 @@ public:
 	int * chunk_edges;
 	int chunk_edges_len;
 	int chunk_nodes_len;
+
+
+
+
 
 };
 
