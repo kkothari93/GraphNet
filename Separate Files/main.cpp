@@ -165,17 +165,6 @@ int main() {
 			MPI_Barrier(MPI_COMM_WORLD);
 			//cout <<  world_rank<< "  " <<__LINE__ << endl;
 
-			// if (world_rank == 0) {
-			// 	for(int i = 0; i<main_network->chunk_nodes_len; i++){
-			// 		if(main_network->chunk_nodes[i] != -1){
-			// 						cout<<main_network->chunk_nodes[i]<<"\t"<<main_network->R[main_network->chunk_nodes[i]*DIM + 0]<<endl;
-			// 						cout<<main_network->chunk_nodes[i]<<"\t"<<main_network->R[main_network->chunk_nodes[i]*DIM + 1]<<endl;}
-			// 	}
-			// }
-			// //TODO: use Network::get_plate_forces() on root proc
-			// //MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-
 			//MPI_Barrier(MPI_COMM_WORLD);
 			MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			if((iter+1)%NSYNC == 0){
