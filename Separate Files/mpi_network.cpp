@@ -150,6 +150,7 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			k++;
 		}
 	}
+	n_chunk_edges = k;
 	for ( ; k < chunk_edges_len; k++) {
 		chunk_edges[k] = -1;
 	}

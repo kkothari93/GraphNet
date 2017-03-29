@@ -47,6 +47,7 @@ public:
 	int * chunk_edges;
 	int chunk_edges_len;
 	int chunk_nodes_len;
+	int n_chunk_edges;
 
 
 

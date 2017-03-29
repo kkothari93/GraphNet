@@ -19,7 +19,7 @@
 #include "mpi_network.h"
 using namespace std;
 
-#define USE_MPI false
+//#define USE_MPI false
 
 
 int main() {
@@ -33,7 +33,11 @@ int main() {
 	#endif
 	DECL_NET;
 
-	if (!USE_MPI) {
+	cout << "Do you want to use MPI? Input \'y\' to use MPI, else enter any other character." << endl;
+	char USE_MPI;
+	cin >> USE_MPI;
+
+	if (USE_MPI != 'y') {
 		float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
 	
 		float weight_multiplier;
@@ -134,7 +138,7 @@ int main() {
 			}
 			int nn = main_network->n_nodes;
 			int id;
-			for(int d = 0 ; d<n_chunk_edges; d++){
+			for(int d = 0 ; d<main_network->n_chunk_edges; d++){
 				id = main_network->chunk_edges[d];
 				if(main_network->edges[2*id] >= nn || main_network->edges[2*id + 1] >= nn){
 							cout<<"Node is "<<main_network->edges[2*id]<<" for index "<<id<<endl;
