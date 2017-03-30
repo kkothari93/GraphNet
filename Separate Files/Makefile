@@ -30,3 +30,5 @@ helper_funcs.o : helper_funcs.cpp helper_funcs.h
 sac_network.o : sac_network.cpp sac_network.h network.h
 	$(LD) $(CFLAGS) sac_network.cpp
 
+clean : 
+	rm -f *.o $(EXECS)
