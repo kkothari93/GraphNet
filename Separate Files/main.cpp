@@ -22,10 +22,11 @@ using namespace std;
 //#define USE_MPI false
 
 
-int main() {
+int main(int argc, char* argv[]) {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d_z4.msh";
+	path = argv[1];
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
@@ -33,11 +34,7 @@ int main() {
 	#endif
 	DECL_NET;
 
-	cout << "Do you want to use MPI? Input \'y\' to use MPI, else enter any other character." << endl;
-	char USE_MPI;
-	cin >> USE_MPI;
-
-	if (USE_MPI != 'y') {
+	if (argv[2] == 0) {
 		float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
 	
 		float weight_multiplier;
