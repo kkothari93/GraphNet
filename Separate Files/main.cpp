@@ -33,8 +33,9 @@ int main(int argc, char* argv[]) {
 	#define DECL_NET Network test_network(path)
 	#endif
 	DECL_NET;
-
-	if (argv[2] == 0) {
+	cout<<*argv[2]<<endl;
+	if (*argv[2]!=1) {
+		cout<<__LINE__<<endl;
 		float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
 	
 		float weight_multiplier;
@@ -45,7 +46,7 @@ int main(int argc, char* argv[]) {
 		int curr_n_edges = old_n_edges;
 
 
-		if(should_stop){return 0;}
+		if(should_stop){cout<<"Simulation needs to stop!\n";return 0;}
 		float* plate_forces;
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 		memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 		}
 		string sb = SACBONDS ? "true" : "false" ; 
-		string fname = FNAME_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
+		string fname = FLDR_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
 		write_to_file<float>(fname, plate_forces, STEPS, DIM);
 
 		free(plate_forces);
@@ -231,8 +232,9 @@ int main(int argc, char* argv[]) {
 
 
 		if (world_rank == 0) {
-			string file_name = "forcesMPI.txt";
-			write_to_file<float>(file_name, plate_forces, STEPS, DIM);
+			string sb = SACBONDS ? "true" : "false" ; 
+			string fname = FLDR_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
+			write_to_file<float>(fname, plate_forces, STEPS, DIM);
 			free(plate_forces);
 			plate_forces = NULL;
 		}

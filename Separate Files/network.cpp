@@ -277,19 +277,28 @@ void Network::get_forces(bool update_damage = false) {
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
+
 		//update damage if needed
 		if (update_damage){
-			damage[j] += kfe(force)*TIME_STEP;
-			//remove edge ... set to special value
-			if(damage[j] > 1.0){
-				cout<<"Breaking bond between "
-				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L, PBC = "<<force \
-				<<", "<<s/L[j]<<", "<<PBC[j]<<endl;
-				for(int d = 0; d<DIM; d++){
-					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
+			if(RATE_DAMAGE){
+				damage[j] += kfe(force)*TIME_STEP;
+				//remove edge ... set to special value
+				if(damage[j] > 1.0){
+					cout<<"Breaking bond between "
+					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
+					<<", "<<s/L[j]<<endl;
+					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
-				cout<<endl;
-			edges[j*2] = -1; edges[j*2+1] = -1;}
+			}
+			else{
+				damage[j] = s/L[j];
+				if(damage[j] > 0.9){
+					cout<<"Breaking bond between "
+					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
+					<<", "<<s/L[j]<<endl;
+					edges[j*2] = -1; edges[j*2+1] = -1;
+				}
+			}
 		}
 	}
 
