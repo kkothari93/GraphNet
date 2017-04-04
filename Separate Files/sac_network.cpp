@@ -45,7 +45,7 @@ void sacNetwork::get_forces(bool update_damage = false) {
 	float force;
 
 
-	memset(forces, 0.0, n_nodes*DIM*sizeof(*forces));
+	memset(forces, 0.0, n_nodes*DIM*sizeof(forces));
 
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -129,7 +129,7 @@ void sacNetwork::malloc_network(string& fname){
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
 	m = (int*)malloc(n_elems*si);
-	L = (float* )malloc(n_elems*sf);
+	sacdamage = (float* )malloc(n_elems*sf);
 }
 
 void sacNetwork::load_network(string& fname) {
