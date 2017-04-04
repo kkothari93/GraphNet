@@ -27,15 +27,17 @@ int main(int argc, char* argv[]) {
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
 	string path = "./template2d_z4.msh";
 	path = argv[1];
+
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
 	#define DECL_NET Network test_network(path)
 	#endif
 	DECL_NET;
-	cout<<*argv[2]<<endl;
-	if (*argv[2]!=1) {
-		cout<<__LINE__<<endl;
+
+	cout<<argv[2]<<endl;
+	if (*argv[2]!='1') {
+		
 		float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
 	
 		float weight_multiplier;
@@ -86,9 +88,9 @@ int main(int argc, char* argv[]) {
 		free(plate_forces);
 	}
 	else {
-
+		cout<<__LINE__<<endl;
 		MPI_Init(NULL, NULL);
-	
+		
 		// Get the number of processes
 	  	int world_size;
 	  	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -123,7 +125,7 @@ int main(int argc, char* argv[]) {
 		forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
 		int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 		// TODO: Sync forces every nth iteration
-
+		cout<<__LINE__<<endl;
 		MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
 
 		// Uniqueness of partition check
@@ -159,11 +161,10 @@ int main(int argc, char* argv[]) {
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 				if(world_rank==0){
+					main_network->plotNetwork(iter, false);
 					main_network->get_stats();
 				}
 			}
-			cout << world_rank << " " << __LINE__ << " iter: " << iter << endl;
-			main_network->plotNetwork(iter, false);
 			main_network->optimize();
 			MPI_Barrier(MPI_COMM_WORLD);
 			//cout <<  world_rank<< "  " <<__LINE__ << endl;

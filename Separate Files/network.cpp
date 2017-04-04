@@ -479,6 +479,9 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	stringstream convert;
 	convert<<"[-100:"<<MAXBOUND+100<<"]";
 	string xrange = convert.str();
+	string bs = "/";
+	string path = FLDR_STRING + bs + std::to_string(iter_step) + ".png";
+
 	gnu.cmd("set xrange " + xrange);
 	gnu.cmd("load 'viridis.pal'");
 	gnu.cmd("set key off");
@@ -488,7 +491,7 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
 		std::to_string(iter_step)+"'");
 	gnu.cmd("set term png size 1200,900");
-	gnu.cmd("set output '"+std::to_string(iter_step)+".png'");
+	gnu.cmd("set output '"+ path + "'");
 	gnu.cmd("replot");
 	gnu.cmd("set term x11");
 	gnu.reset_plot();

@@ -1,7 +1,7 @@
 import openpyxl as xl
 from subprocess import call
 import os
-
+import sys
 
 def gen_param_file(pdict, fldr_string):
     params_header = "#ifndef __params__\n#define __params__\n\n"
@@ -67,20 +67,20 @@ class xlreader():
                 self.ws['A'+str(i)].value] = self.ws[column+str(i)].value
         return params_dict
 
-    def compile(self):
+    def compile(self,n):
         # TODO: subprocess for run
         for i, param in enumerate(self.param_list):
-          fldr_string = '"set%d"'%i
-          fldr_name = "set%d"%i + str(float(param['L_STD'][:-1])/float(param['L_MEAN'][:-1]))
+          fldr_string = '"set%d"'%(n+i)
+          fldr_name = "set%d"%(n+i)
           if not os.path.exists(fldr_name):
             os.makedirs(fldr_name)
           gen_param_file(param, fldr_string)
-          call("./compile.sh " + fldr_string, shell=True)
+          call("./compile.sh " + str(n+i), shell=True)
         return None
 
-def main():
+def main(n):
     a = xlreader("param_list.xlsx")
-    a.compile()
+    a.compile(n)
 
 if __name__ == '__main__':
-    main()
+    main(int(sys.argv[1]))
