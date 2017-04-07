@@ -13,43 +13,53 @@ MPI_Network::MPI_Network(MPI_Network const & source) {
 }
 
 MPI_Network::MPI_Network(Network const & source): Network(source) {
-	type_is_Network = true;
 }
 
 MPI_Network::MPI_Network(sacNetwork const & source): sacNetwork(source) {
-	type_is_Network = false;
-
 }
 
 MPI_Network::~MPI_Network() {
 	clear();
 }
 
+MPI_Network::MPI_Network(string& fname){
+	if(SACBONDS){
+		cout<<"Making a MPI sacNetwork object\n";
+		sacNetwork(fname);
+	}
+	else{
+		cout<<"Making a MPI Network object\n";
+		Network(fname);
+	}
+}
+
+
 void MPI_Network::clear() {
-	free(not_moving_nodes);
-	not_moving_nodes = NULL;
+	// free(not_moving_nodes);
+	// not_moving_nodes = NULL;
 	//cout << __LINE__ << endl;
 	delete[] chunk_nodes;
 	chunk_nodes = NULL;
 	delete[] chunk_edges;
 	chunk_edges = NULL;
+
 }
 
 void MPI_Network::copy(MPI_Network const & source) {
 
-	if(type_is_Network){Network::copy(source);}
+	if(SACBONDS){Network::copy(source);}
 	else{sacNetwork::copy(source);}
 
-	n_not_moving = source.n_not_moving;
-	not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
+	// n_not_moving = source.n_not_moving;
+	// not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
 	chunk_edges_len = source.chunk_edges_len;
 	chunk_edges = new int[chunk_edges_len];
 	chunk_nodes_len = source.chunk_nodes_len;
 	chunk_nodes = new int[chunk_nodes_len];
 
-	for (int i = 0; i < n_not_moving; i++) {
-		not_moving_nodes[i] = source.not_moving_nodes[i];
-	}
+	// for (int i = 0; i < n_not_moving; i++) {
+	// 	not_moving_nodes[i] = source.not_moving_nodes[i];
+	// }
 	for (int i = 0; i < chunk_edges_len; i++) {
 		chunk_edges[i] = source.chunk_edges[i];
 	}
@@ -64,25 +74,25 @@ inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 }
 
 
-// void MPI_Network::rewrite_moving_nodes(){
-// 	// Takes intersection of base class' moving nodes 
-// 	// with chunk_nodes of MPI_class
-// 	int chunk_n_moving = 0;
-// 	int chunk_moving[n_moving];
-// 	bool found;
-// 	for(int i=0; i<chunk_nodes_len; i++){
-// 		for(int d=0; d<n_moving; d++)
-// 			if(chunk_nodes[i]==moving_nodes[d]){
-// 				chunk_moving[chunk_n_moving] = chunk_nodes[i]; 
-// 				chunk_n_moving++;
-// 			}
-// 		}
-// 	}
-// 	n_moving = chunk_n_moving;
-// 	for(int d= 0; d<n_moving; d++){
-// 		moving_nodes[d] = chunk_moving[d];
-// 	}
-// }
+void MPI_Network::rewrite_moving_nodes(){
+	// Takes intersection of base class' moving nodes 
+	// with chunk_nodes of MPI_class
+	int chunk_n_moving = 0;
+	int chunk_moving[n_moving];
+	bool found;
+	for(int i=0; i<chunk_nodes_len; i++){
+		for(int d=0; d<n_moving; d++){
+			if(chunk_nodes[i]==moving_nodes[d]){
+				chunk_moving[chunk_n_moving] = chunk_nodes[i]; 
+				chunk_n_moving++;
+			}
+		}
+	}
+	n_moving = chunk_n_moving;
+	for(int d= 0; d<n_moving; d++){
+		moving_nodes[d] = chunk_moving[d];
+	}
+}
 
 void MPI_Network::init_MPI(int world_rank, int world_size) {
 
@@ -122,6 +132,8 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	for ( ; k < chunk_edges_len; k++) {
 		chunk_edges[k] = -1;
 	}
+
+	rewrite_moving_nodes();
 
 }
 
@@ -204,6 +216,16 @@ void MPI_Network::get_forces(bool update_damage = false) {
 		if (update_damage){
 			if(RATE_DAMAGE){
 				damage[j] += kfe(force)*TIME_STEP;
+				if(SACBONDS){
+					if(m[j] > 0){
+						sacdamage[j] += kf(force)*TIME_STEP;
+					if(sacdamage[j] > 1.0){
+						L[j] += (L_MEAN - L[j])/m[j] ; 
+						m[j] -= 1;
+						sacdamage[j] = 0.0;
+						}
+					}
+				}
 				//remove edge ... set to special value
 				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
@@ -227,49 +249,49 @@ void MPI_Network::get_forces(bool update_damage = false) {
 
 }
 
-bool MPI_Network::notmoving(int nodeid){
-	bool init = false;
-	for(int i=0;i<n_not_moving;i++){
-		if(nodeid == not_moving_nodes[i]){
-			init = true;
-			break;
-		}
-	}
-	return init;
-}
+// bool MPI_Network::notmoving(int nodeid){
+// 	bool init = false;
+// 	for(int i=0;i<n_not_moving;i++){
+// 		if(nodeid == not_moving_nodes[i]){
+// 			init = true;
+// 			break;
+// 		}
+// 	}
+// 	return init;
+// }
 
-void MPI_Network::optimize(float eta, float alpha, int max_iter) {
+// void MPI_Network::optimize(float eta, float alpha, int max_iter) {
 
-	float* rms_history = new float[n_nodes*DIM](); // () allows 0.0 initialization
-	float g, delR;
-	int id, d, node;
-	for(int step = 0; step < max_iter; step++){
-		get_forces(false);
+// 	float* rms_history = new float[n_nodes*DIM](); // () allows 0.0 initialization
+// 	float g, delR;
+// 	int id, d, node;
+// 	for(int step = 0; step < max_iter; step++){
+// 		get_forces(false);
 	
-		if(getabsmax(forces,n_nodes*DIM)>TOL){
-			for(id = 0; id < chunk_nodes_len; id++){
-				node = chunk_nodes[id];
-				if (chunk_nodes[id] ==-1 || notmoving(chunk_nodes[id])) {
-						continue;
-				}				
-				#pragma unroll
-					for(d = 0; d<DIM; d++){
-						g = forces[DIM*node+d];
-						rms_history[id*DIM + d] = alpha*rms_history[id*DIM + d] + (1-alpha)*g*g;
-						delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
-						R[node*DIM + d] += delR;
-					}				
-			}
-		}
-		else{
-			break;
-		}
-	}
-	get_forces(true);
-	delete[] rms_history;
-	rms_history = NULL;
+// 		if(getabsmax(forces,n_nodes*DIM)>TOL){
+// 			for(id = 0; id < chunk_nodes_len; id++){
+// 				node = chunk_nodes[id];
+// 				if (chunk_nodes[id] ==-1 || notmoving(chunk_nodes[id])) {
+// 						continue;
+// 				}				
+// 				#pragma unroll
+// 					for(d = 0; d<DIM; d++){
+// 						g = forces[DIM*node+d];
+// 						rms_history[id*DIM + d] = alpha*rms_history[id*DIM + d] + (1-alpha)*g*g;
+// 						delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
+// 						R[node*DIM + d] += delR;
+// 					}				
+// 			}
+// 		}
+// 		else{
+// 			break;
+// 		}
+// 	}
+// 	get_forces(true);
+// 	delete[] rms_history;
+// 	rms_history = NULL;
 
-}
+// }
 
 
 

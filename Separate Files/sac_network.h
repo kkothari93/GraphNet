@@ -26,12 +26,13 @@ class sacNetwork : virtual public Network{
 	public:
 		sacNetwork();
 		~sacNetwork();
+		sacNetwork(sacNetwork const &);
 		sacNetwork(string& fname);
 		void clear();
 		void malloc_network(string&);
 		void load_network(string&);
 		void get_forces(bool);
-		
+
 };
 
 #endif

@@ -14,6 +14,11 @@ sacNetwork::~sacNetwork(){
 	clear();
 }
 
+//TODO: Copy constructor for sac network
+sacNetwork(sacNetwork const & source): Network(source){
+}
+
+
 void sacNetwork::clear() {
 	// DO NOT CLEAR baseclass' (Network) variables from here
 	// free(R);

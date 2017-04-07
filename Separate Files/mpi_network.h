@@ -27,6 +27,7 @@ class MPI_Network : virtual public Network, public sacNetwork{
 public:
 
 	MPI_Network();
+	MPI_Network(string&);
 	MPI_Network(MPI_Network const & source);
 	MPI_Network(Network const & source);
 	MPI_Network(sacNetwork const & source);
@@ -34,13 +35,13 @@ public:
 	void copy(MPI_Network const & source);
 	void clear();
 	void get_forces(bool);
-	void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
+	// void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void init_MPI(int world_rank, int world_size);
-	bool notmoving(int nodeid);
-	//void rewrite_moving_nodes();
-	bool type_is_Network;
-	int* not_moving_nodes;
-	int n_not_moving;
+	//bool notmoving(int nodeid);
+	void rewrite_moving_nodes();
+
+	//int* not_moving_nodes;
+	//int n_not_moving;
 	int * chunk_nodes;
 	int * chunk_edges;
 	int chunk_edges_len;
