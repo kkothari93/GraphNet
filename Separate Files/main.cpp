@@ -248,7 +248,7 @@ int main(int argc, char* argv[]) {
 		chunk_nodes_buffer = NULL;
 		delete main_network;
 		main_network = NULL;
-		cout << "Made it to the end! Exiting Now." << endl;
+		cout << "Made it to the end! Exiting now." << endl;
 		MPI_Finalize();
 
 	}

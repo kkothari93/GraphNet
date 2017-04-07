@@ -71,8 +71,6 @@ public:
 	//add moving nodes to speed up force
 	int* moving_nodes;
 	int n_moving;
-
-	
 };
 
 #endif

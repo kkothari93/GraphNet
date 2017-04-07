@@ -19,7 +19,7 @@
 #include "network.h"
 using namespace std;
 
-class sacNetwork : public Network{
+class sacNetwork : virtual public Network{
 	private:
 		int* m; //n_elems
 		float* sacdamage; // n_elems
@@ -31,8 +31,7 @@ class sacNetwork : public Network{
 		void malloc_network(string&);
 		void load_network(string&);
 		void get_forces(bool);
-
-
+		
 };
 
 #endif

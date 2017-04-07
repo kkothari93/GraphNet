@@ -13,11 +13,11 @@ MPI_Network::MPI_Network(MPI_Network const & source) {
 }
 
 MPI_Network::MPI_Network(Network const & source): Network(source) {
-
+	type_is_Network = true;
 }
 
-MPI_Network::MPI_Network(sacNetwork const & source): Network(source) {
-
+MPI_Network::MPI_Network(sacNetwork const & source): sacNetwork(source) {
+	type_is_Network = false;
 
 }
 
@@ -26,7 +26,6 @@ MPI_Network::~MPI_Network() {
 }
 
 void MPI_Network::clear() {
-	Network::clear();
 	free(not_moving_nodes);
 	not_moving_nodes = NULL;
 	//cout << __LINE__ << endl;
@@ -38,7 +37,8 @@ void MPI_Network::clear() {
 
 void MPI_Network::copy(MPI_Network const & source) {
 
-	Network::copy(source);
+	if(type_is_Network){Network::copy(source);}
+	else{sacNetwork::copy(source);}
 
 	n_not_moving = source.n_not_moving;
 	not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
@@ -59,62 +59,30 @@ void MPI_Network::copy(MPI_Network const & source) {
 
 }
 
-void MPI_Network::load_network(string& fname){
-
-
-	if (initialized) {
-		clear();
-	}
-	//Check if file exists
-	bool exists = does_file_exist(fname);
-	if(!exists){
-		cout<<"File does not exist!\n";
-		return;
-	}
-	
-	//Malloc all variables
-	malloc_network(fname);
-
-	// cout<<"Malloc was successful!\n";
-
-	// cout<<"Reading the mesh...\n";
-	take_input(R, edges, n_nodes, n_elems, fname);
-	// cout<<"Mesh read successfully!\n";
-	// cout<<"Number of nodes are: "<<n_nodes<<endl;
-	// cout<<"Number of elements are: "<<n_elems<<endl;
-
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, \
-		n_lside, n_rside, n_tside, n_bside, n_nodes);
-
-
-	// NOT moving nodes
-	n_not_moving = n_tside + n_bside;
-	not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
-	
-	int c = 0;
-	for(int i =0; i<n_not_moving; i++){
-		if(i>n_tside){
-			not_moving_nodes[i] = bsideNodes[i-n_tside];
-		}
-		else{
-			not_moving_nodes[i] = tsideNodes[i];
-		}
-	}
-	//cout<<"We have "<<c<<" moving nodes\n";
-
-
-	//cout<<"Side nodes written successfully! \n";
-	__init__(L, damage, PBC, n_elems);
-
-	this->make_edge_connections(15.0);
-	cout<<"Number after new connections made: "<<n_elems<<endl;
-
-
-}
-
 inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 	return (R[0] >= x_lo && R[0] < x_hi && R[1] >= y_lo && R[1] < y_hi);
 }
+
+
+// void MPI_Network::rewrite_moving_nodes(){
+// 	// Takes intersection of base class' moving nodes 
+// 	// with chunk_nodes of MPI_class
+// 	int chunk_n_moving = 0;
+// 	int chunk_moving[n_moving];
+// 	bool found;
+// 	for(int i=0; i<chunk_nodes_len; i++){
+// 		for(int d=0; d<n_moving; d++)
+// 			if(chunk_nodes[i]==moving_nodes[d]){
+// 				chunk_moving[chunk_n_moving] = chunk_nodes[i]; 
+// 				chunk_n_moving++;
+// 			}
+// 		}
+// 	}
+// 	n_moving = chunk_n_moving;
+// 	for(int d= 0; d<n_moving; d++){
+// 		moving_nodes[d] = chunk_moving[d];
+// 	}
+// }
 
 void MPI_Network::init_MPI(int world_rank, int world_size) {
 
@@ -232,23 +200,29 @@ void MPI_Network::get_forces(bool update_damage = false) {
 			forces[node2*DIM + k] += edge_force[k];
 		}
 		//update damage if needed
-		if (update_damage) { //&& (node1 < node2)){
-			damage[j] += kfe(force)*TIME_STEP;
-			//remove edge ... set to special value
-			if(damage[j] > 1.0){
-				cout<<"Breaking bond between "
-				<<node1<<" and "<<node2<<" F,s = "<<force \
-				<<", "<<s<<endl;
-				for(int d = 0; d<DIM; d++){
-					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
+		//update damage if needed
+		if (update_damage){
+			if(RATE_DAMAGE){
+				damage[j] += kfe(force)*TIME_STEP;
+				//remove edge ... set to special value
+				if(damage[j] > 1.0){
+					cout<<"Breaking bond between "
+					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
+					<<", "<<s/L[j]<<endl;
+					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
-				cout<<endl;
-				edges[j*2] = -1; edges[j*2+1] = -1;
 			}
-
+			else{
+				damage[j] = s/L[j];
+				if(damage[j] > 0.9){
+					cout<<"Breaking bond between "
+					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
+					<<", "<<s/L[j]<<endl;
+					edges[j*2] = -1; edges[j*2+1] = -1;
+				}
+			}
 		}
 	}
-	//printf("forces: %f\t%f\n", forces[4], forces[5]);
 	return;
 
 }
@@ -291,6 +265,7 @@ void MPI_Network::optimize(float eta, float alpha, int max_iter) {
 			break;
 		}
 	}
+	get_forces(true);
 	delete[] rms_history;
 	rms_history = NULL;
 

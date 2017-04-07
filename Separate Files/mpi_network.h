@@ -22,7 +22,7 @@ using namespace std;
 
 #define NSYNC 100
 
-class MPI_Network : public Network {
+class MPI_Network : virtual public Network, public sacNetwork{
 
 public:
 
@@ -33,14 +33,12 @@ public:
 	~MPI_Network();
 	void copy(MPI_Network const & source);
 	void clear();
-	//void malloc_network();
-	void load_network(string& fname);
 	void get_forces(bool);
 	void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
 	void init_MPI(int world_rank, int world_size);
 	bool notmoving(int nodeid);
-
-
+	//void rewrite_moving_nodes();
+	bool type_is_Network;
 	int* not_moving_nodes;
 	int n_not_moving;
 	int * chunk_nodes;
