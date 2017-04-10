@@ -101,23 +101,40 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	float x_hi = world_rank%2 == 0? PAD/2 : PAD;
 	float y_lo = ((PAD*2.0/world_size) * y_level);
 	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD : ((PAD*2.0/world_size) * (y_level+1));
-
-	chunk_nodes_len = n_nodes/world_size + sqrt(n_nodes)*2;
+	
+	
+	// int k = 0;
+	// for (int i = 0; i < n_nodes; i+=1) {
+	// 	if (Rinset(&(R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
+	// 		// chunk_nodes[k] = i;
+	// 		k++;
+	// 	}
+	// }
+	chunk_nodes_len = int(n_nodes/world_size*1.3);
 	chunk_nodes = new int[chunk_nodes_len];
-	int k = 0;
-	for (int i = 0; i < n_nodes; i+=1) {
+	// initialization can be inside for k, increments need to be inside if loop
+	for (int i = 0,k=0; i < n_nodes; i+=1) {
 		if (Rinset(&(R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			chunk_nodes[k] = i;
 			k++;
 		}
 	}
-	for (; k < chunk_nodes_len; k++) {
-		chunk_nodes[k] = -1;
-	}
-	chunk_edges_len = n_elems/world_size + sqrt(n_elems)*5;
+
+	// k = 0;
+	// for (int i = 0; i < n_elems; i+=1) {
+
+	// 	// check this condition for both edges, use Rinset
+	// 	if (!Rinset(&(R[edges[i*2]*DIM]),x_lo, x_hi, y_lo, y_hi) && !Rinset(&(R[edges[i*2+1]*DIM]),x_lo, x_hi, y_lo, y_hi)) {
+	// 		continue;
+	// 	}
+	// 	else {
+	// 		k++;
+	// 	}
+	// }
+
+	chunk_edges_len = int(n_elems/world_size*1.3);
 	chunk_edges = new int[chunk_edges_len];
-	k = 0;
-	for (int i = 0; i < n_elems; i+=1) {
+	for (int i = 0, k=0; i < n_elems; i+=1) {
 
 		// check this condition for both edges, use Rinset
 		if (!Rinset(&(R[edges[i*2]*DIM]),x_lo, x_hi, y_lo, y_hi) && !Rinset(&(R[edges[i*2+1]*DIM]),x_lo, x_hi, y_lo, y_hi)) {
@@ -127,10 +144,6 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			chunk_edges[k] = i;
 			k++;
 		}
-	}
-	n_chunk_edges = k;
-	for ( ; k < chunk_edges_len; k++) {
-		chunk_edges[k] = -1;
 	}
 
 	rewrite_moving_nodes();

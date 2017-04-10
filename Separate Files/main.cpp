@@ -15,6 +15,7 @@
 #include <cstring>
 #include <stddef.h>
 #include <mpi.h>
+#include <assert.h>
 
 #include "mpi_network.h"
 using namespace std;
@@ -23,8 +24,8 @@ using namespace std;
 int main(int argc, char* argv[]) {
 
 	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
-	string path = "./template2d_z4.msh";
-	path = argv[1];
+	//string path = "./template2d_z4.msh";
+	string path = argv[1];
 
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
@@ -32,10 +33,25 @@ int main(int argc, char* argv[]) {
 	#define DECL_NET Network test_network(path)
 	#endif
 	DECL_NET;
+
+	if(CRACKED){
+		// Specific crack
+		Crack a;
+		a.setter(MAXBOUND, MAXBOUND/2.0, MAXBOUND/6.0, MAXBOUND/10.0, 0.0, 1.0);
+
+		Cracklist definite_cracks(a);
+		test_network.apply_crack(definite_cracks);
+
+		// Random cracks
+		// Cracklist random_cracks(4, MAXBOUND);
+		// test_network.apply_crack(random_cracks);
+	}
+
+
 	//*argv[2] if is working now. Do not change
 	if (*argv[2]!='1') {
 		
-		float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
+		float weight_goal = 2.30401e6; // weight of similarly sized triangular mesh network
 	
 		float weight_multiplier;
 		float weight = test_network.get_weight();
@@ -50,12 +66,6 @@ int main(int argc, char* argv[]) {
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 		memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
 
-		if(CRACKED){
-			Cracklist alist(4, MAXBOUND);
-			test_network.apply_crack(alist);
-		}
-
-
 		test_network.plotNetwork(0, true);
 
 		clock_t t = clock();
@@ -68,11 +78,11 @@ int main(int argc, char* argv[]) {
 			test_network.get_plate_forces(plate_forces, i);
 			if((i+1)%100 == 0){
 				should_stop = test_network.get_stats();
-				if(should_stop){break;}
 				curr_n_edges = test_network.get_current_edges();
-				if(curr_n_edges<old_n_edges){
-						test_network.plotNetwork(i, false);
+				if(curr_n_edges<=old_n_edges){
+					test_network.plotNetwork(i, false);
 				}
+				if(should_stop){break;}
 				cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 			}
@@ -95,9 +105,9 @@ int main(int argc, char* argv[]) {
 	  	int world_rank;
 	  	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	  	cout<<__LINE__<<endl;
-	  	MPI_Network * main_network = new MPI_Network(path);
-		cout<<__LINE__<<endl;	  	
+	  	
+	  	MPI_Network * main_network = new MPI_Network(test_network);
+		
 	  	float* plate_forces = NULL;
 
   
@@ -113,14 +123,19 @@ int main(int argc, char* argv[]) {
 	    
 	    // world_rank 0 handles forces and R sync
 		if (world_rank == 0) {
-			plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+			plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS/NSYNC);
 			memset(plate_forces, 0, STEPS/NSYNC*DIM*sizeof(float));
 		}
-
+		
+		// cout<<"world rank:  "<<world_rank<<main_network->n_elems<<endl;
 		main_network->init_MPI(world_rank, world_size);
+		// for(int d=0; d<main_network->n_elems;d++){
+		// 	assert(main_network->L[d]);
+		// }
+		cout<<__LINE__<<endl;
 		MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); 
-		
+
 		size_t r_size = main_network->n_nodes * DIM * world_size;
 		float * R_buffer; 
 		R_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
@@ -128,8 +143,9 @@ int main(int argc, char* argv[]) {
 		forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the forces from all nodes
 		// Force buffer needed to calculate plate_forces
 		int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
+		cout<<"world rank: "<<world_rank<< " chunk len = "<<main_network->chunk_nodes_len<<endl;
 		// TODO: Sync forces every nth iteration
-		//cout<<__LINE__<<endl;
+		
 		MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
 
 		// Uniqueness of partition check
@@ -142,7 +158,7 @@ int main(int argc, char* argv[]) {
 			}
 			int nn = main_network->n_nodes;
 			int id;
-			for(int d = 0 ; d<main_network->n_chunk_edges; d++){
+			for(int d = 0 ; d<main_network->chunk_edges_len; d++){
 				id = main_network->chunk_edges[d];
 				if(main_network->edges[2*id] >= nn || main_network->edges[2*id + 1] >= nn){
 							cout<<"Node is "<<main_network->edges[2*id]<<" for index "<<id<<endl;
@@ -194,14 +210,15 @@ int main(int argc, char* argv[]) {
 							if((iter+1)%NSYNC == 0){
 								main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
 								main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
-								cout << "Synced forces" << endl;
-								main_network->get_plate_forces(plate_forces, iter);
 							}
 						}
 					}
 					
 				}
-				
+				if((iter+1)%NSYNC == 0){
+					cout << "Synced forces" << endl;
+					main_network->get_plate_forces(plate_forces, iter);
+				}
 				main_network->move_top_plate();
 			}
 

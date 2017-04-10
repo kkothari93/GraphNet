@@ -334,7 +334,8 @@ void Network::apply_crack(Cracklist & alist) {
 	//make clusters
 	vector<int> within_circle;
 	vector<int> nodes_to_remove;
-	int edges_removed = 0, node1, node2;
+	int edges_removed = 0; 
+	int node1, node2;
 	Crack crack;
 	float x;
 	float y;
@@ -348,7 +349,7 @@ void Network::apply_crack(Cracklist & alist) {
 			x -= crack.c[0];
 			y -= crack.c[1];
 			si = crack.trig[0];
-			co = crack.trig[0];
+			co = crack.trig[1];
 			equation = pow(x*co + y*si, 2)/pow(crack.a[0],2) + \
 						pow(x*si - y*co, 2)/pow(crack.a[1],2);
 
@@ -362,9 +363,6 @@ void Network::apply_crack(Cracklist & alist) {
 
 	for(int i= 0; i < n_nodes; i++){
 		if(contains(within_circle, i)){
-			continue;
-		}
-		else{
 			nodes_to_remove.push_back(i);
 		}
 	}

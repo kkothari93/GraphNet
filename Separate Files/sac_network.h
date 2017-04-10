@@ -20,10 +20,9 @@
 using namespace std;
 
 class sacNetwork : virtual public Network{
-	private:
+	public:
 		int* m; //n_elems
 		float* sacdamage; // n_elems
-	public:
 		sacNetwork();
 		~sacNetwork();
 		sacNetwork(sacNetwork const &);
@@ -31,7 +30,7 @@ class sacNetwork : virtual public Network{
 		void clear();
 		void malloc_network(string&);
 		void load_network(string&);
-		void get_forces(bool);
+		virtual void get_forces(bool);
 
 };
 

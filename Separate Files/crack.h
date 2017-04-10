@@ -35,6 +35,7 @@ public:
 	Crack & operator[](int);
 	Cracklist(int, float);
 	Cracklist();
+	Cracklist(Crack&);
 	~Cracklist();
 } ;
 

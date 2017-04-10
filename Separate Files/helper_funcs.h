@@ -138,7 +138,7 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 
 	logger<<"1D pulling of a 2D gel"<<"\n";
 	logger<<"File created at "<<std::asctime(std::localtime(&result));
-	logger<<"\n";
+	logger<<"Rate damage : "<<RATE_DAMAGE<<"\n";
 
 	logger<<"Sim dimension : "<<DIM<<"\n";
 	logger<<"Simulation time : "<<SIM_TIME<<"\n";
@@ -151,7 +151,7 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 	logger<<" -- L_STD : "<<L_STD<<"\n";
 	logger<<"Others : SACBONDS = "<<SACBONDS<<"; IMPLEMENT_PBC = "<<IMPLEMENT_PBC<<"\n";
 	
-	logger<<"Cracked? : "<<CRACKED<<"\n";
+	logger<<"Cracked? : "<<CRACKED<<"; "<<PROB_REMOVAL<<"\n";
 
     // logger.open(fname, ios::trunc|ios_base::out);
 	for(int i =0; i < rows; i++){

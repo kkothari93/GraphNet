@@ -3,11 +3,13 @@
 #include <random>
 #define PI 3.14159265
 using namespace std;
-// Crack::Crack() : Crack(2) {
-	
-// }
 
-// Crack::Crack() :Crack(2) {}
+
+Cracklist::Cracklist(Crack& a){
+	n_cracks = 1;
+	listofCracks = new Crack[n_cracks];
+	listofCracks[0].setter(a);
+}
 
 Cracklist::Cracklist(int n, float bound){
 	this->dim = 2;

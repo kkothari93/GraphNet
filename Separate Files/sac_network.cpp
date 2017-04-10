@@ -15,7 +15,15 @@ sacNetwork::~sacNetwork(){
 }
 
 //TODO: Copy constructor for sac network
-sacNetwork(sacNetwork const & source): Network(source){
+sacNetwork::sacNetwork(sacNetwork const & source): Network(source){
+	size_t sf = sizeof(float);
+	size_t si = sizeof(int);
+	m = (int*)malloc(si*n_elems);
+	sacdamage = (float*)malloc(sf*n_elems);
+	for(int d=0; d<n_elems; d++){
+		m[d] = source.m[d];
+		sacdamage[d] = 0.0f; 
+	}
 }
 
 
