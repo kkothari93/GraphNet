@@ -1,20 +1,42 @@
+/**
+@file sac_network.cpp
+\brief Implements all functions prototyped in sac_network.h
+*/
+
 #include "sac_network.h"
 
+// ----------------------------------------------------------------------- 
+/// \brief Default constructor
+// ----------------------------------------------------------------------- 
 sacNetwork::sacNetwork(){
 	initialized = false;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Constructor that instantiates a sacNetwork object according
+/// to given \emph{fname} file. Please note that there are no checks made
+/// on the GMSH .msh filepath and that responsibility is left to the user.
+///
+/// \param fname --> takes a filename and instantiates Network object
+///
+// ----------------------------------------------------------------------- 
 sacNetwork::sacNetwork(string& fname){
 	initialized = false;
 	load_network(fname);
 	initialized = true;
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Default destructor
+// ----------------------------------------------------------------------- 
 sacNetwork::~sacNetwork(){
 	clear();
 }
 
-//TODO: Copy constructor for sac network
+// ----------------------------------------------------------------------- 
+/// \brief Copy constructor
+// ----------------------------------------------------------------------- 
 sacNetwork::sacNetwork(sacNetwork const & source): Network(source){
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
@@ -27,26 +49,31 @@ sacNetwork::sacNetwork(sacNetwork const & source): Network(source){
 }
 
 
+// ----------------------------------------------------------------------- 
+/// \brief Clears extra variables declared by sacNetwork object. Called
+/// by destructor.
+// ----------------------------------------------------------------------- 
 void sacNetwork::clear() {
 	// DO NOT CLEAR baseclass' (Network) variables from here
-	// free(R);
-	// free(edges);
-	// free(forces);
-	// free(damage);
 	free(sacdamage);
 	sacdamage = NULL;
 	free(m);
 	m = NULL;
-	// free(L);
-	// free(PBC);
-	// free(lsideNodes);
-	// free(rsideNodes);
-	// free(tsideNodes);
-	// free(bsideNodes);
-	// free(moving_nodes);
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Overrides parent class' function. 
+/// Calculates forces along edges of the polymer network graph (i.e
+/// forces in each polymer). The forces are then assigned to nodes which 
+/// prepares the network for the optimization step. If update_damage is 
+/// true, the appropriate damage metric is also updated. If damage exceeds
+/// predefined thresholds, the edge is broken. Hidden lengths are also opened 
+/// according to damage in these hidden bonds. The function does not return
+/// anything as it updates the objects forces directly.
+///
+/// \param update_damage (bool) --> flag to update damage
+// -----------------------------------------------------------------------
 void sacNetwork::get_forces(bool update_damage = false) {
 
 	int node1, node2;
@@ -136,6 +163,11 @@ void sacNetwork::get_forces(bool update_damage = false) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Extends parent class' function to add memory allocation for extra
+/// class variables.
+///
+// -----------------------------------------------------------------------
 void sacNetwork::malloc_network(string& fname){
 	
 	Network::malloc_network(fname);
@@ -145,6 +177,12 @@ void sacNetwork::malloc_network(string& fname){
 	sacdamage = (float* )malloc(n_elems*sf);
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Overrides parent class' function to initialize extra variables.
+/// Called by sacNetwork(string& fname).
+///
+// -----------------------------------------------------------------------
 void sacNetwork::load_network(string& fname) {
 
 	if (initialized) {

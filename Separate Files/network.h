@@ -18,6 +18,12 @@
 #include <stddef.h>
 #include "vel.h"
 
+/**
+@file network.h
+\brief Conceptualizes and builds a polymer network as a graph
+G = (V,E) (i.e. a set of nodes (crosslinkers, V) and a set of
+edges (polymers, E)).
+*/
 #include "helper_funcs.h"
 #include "crack.h"
 using namespace std;
@@ -26,7 +32,17 @@ const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
 const float vel[DIM] = {vel_x, vel_y};
 
 class Network {
+/**
+\brief Implements a network of discrete chains.
 
+This is the base class that takes in a GMSH .msh file to build 
+a network. All edges in the mesh generated from GMSH are taken 
+as edges of the network. The nodes in the mesh are taken as 
+cross-linker positions and the edges as polymers. 
+
+All properties relevant to the computational experiments are initialized.
+Experiments are then member functions that can be called.
+*/
 public:
 	Network();
 	Network(Network const & source);

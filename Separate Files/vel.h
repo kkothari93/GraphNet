@@ -1,3 +1,7 @@
+// Specifies the velocities for pulling top plate 
+// if need be add: vel_z here
+
+
 #ifndef _vel_included_
 #define _vel_included_
 

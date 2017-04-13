@@ -1,3 +1,5 @@
+// Contains all the helper functions needed
+
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
@@ -18,9 +20,20 @@
 //#include "gnuplot_i.hpp"
 using namespace std;
 
+/**
+@file helper_functions.cpp
+\brief Implements functions prototyped in helper_functions.h. Functions
+implemented here are not expected to be called by user. Hence, only brief 
+descriptions without parameter descriptions is attached.
+*/
+
 #include "vel.h"
 #include "helper_funcs.h"
 
+// ----------------------------------------------------------------------- 
+/// \brief Gives the edge nodes for a network.
+///
+// -----------------------------------------------------------------------
 void side_nodes(float* R,\
 	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\
 	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
@@ -34,6 +47,11 @@ void side_nodes(float* R,\
 	//cout << __LINE__ << endl;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Converts mesh elements from GMSH file to edges and nodes. Only 
+/// implemented elements of <element-id> = 2 or 3. Need to extend for 3D.
+///
+// -----------------------------------------------------------------------
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges){
 	int* local_nodes = new int[n_vertices];
 	int garbage[3];
@@ -70,6 +88,11 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 	delete[] local_nodes;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Reads the number of edges in elements. Only implemented elements
+/// of <element-id> = 2 or 3.
+///
+// -----------------------------------------------------------------------
 void mapping(int& edge_counter, int elem_type){
 	switch(elem_type){
 		case 2:
@@ -83,6 +106,11 @@ void mapping(int& edge_counter, int elem_type){
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Reads the number of nodes and edges according to the .msh file.
+/// Useful for allocating memory in the class' constructors.
+///
+// -----------------------------------------------------------------------
 void read_n(int& n_nodes, int& n_elems, string& fname){
 
 	string line;
@@ -131,6 +159,10 @@ void read_n(int& n_nodes, int& n_elems, string& fname){
 	source.close();
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Reads the input and converts to appropriate network data
+///
+// -----------------------------------------------------------------------
 void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 	
 	string line;
@@ -205,6 +237,11 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 	source.close();
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Initializes various properties for each edge in the graph
+///
+// -----------------------------------------------------------------------
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
 	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
@@ -217,6 +254,11 @@ void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	}	
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Gives a force vector given the nodes and the contour length of the 
+/// polymer connecting these.
+///
+// -----------------------------------------------------------------------
 void forcevector(float* result, float* r1, float* r2, float L){
 	float rhat[DIM];
 	float s = dist(r1, r2);
@@ -227,7 +269,10 @@ void forcevector(float* result, float* r1, float* r2, float L){
 
 
 
-
+// ----------------------------------------------------------------------- 
+/// \brief Gets the absolute maximum of an array
+///
+// -----------------------------------------------------------------------
 float getabsmax(float* arr, size_t sizeofarr){
 	float max_elem = 0.0;
 	for(int i = 0; i<sizeofarr; i++){
@@ -238,7 +283,10 @@ float getabsmax(float* arr, size_t sizeofarr){
 
 
 
-
+// ----------------------------------------------------------------------- 
+/// \brief Overrides __init__ for sacNetworks.
+///
+// -----------------------------------------------------------------------
 void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
 	// std::normal_distribution<float> generator(L_MEAN, L_STD);

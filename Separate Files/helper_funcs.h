@@ -1,3 +1,9 @@
+/**
+@file helper_functions.h
+\brief Defines all heler functions needed for experiments. Inline helper functions
+defined here.
+*/
+
 #ifndef __helper__
 #define __helper__
 #include <iostream>
@@ -20,6 +26,7 @@
 #include "params.h"
 //#include "gnuplot_i.hpp"
 using namespace std;
+
 
 void side_nodes(float* R,\
 	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\

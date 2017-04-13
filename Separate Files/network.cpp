@@ -1,11 +1,24 @@
+/**
+@file network.cpp
+This file implements all functions defined in header network.h
+*/
 #include "network.h"
 #include "gnuplot_i.hpp"
 
+// ----------------------------------------------------------------------- 
+/// \brief Default constructor
+// ----------------------------------------------------------------------- 
 Network::Network() {
+
 	initialized = false;
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Copy constuctor for class Network
+///
+/// \param source --> copies from a Network object source
+// ----------------------------------------------------------------------- 
 Network::Network(Network const & source) {
 
 	initialized = false;
@@ -14,6 +27,14 @@ Network::Network(Network const & source) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Constructor that instantiates a Network object according
+/// to given \emph{fname} file. Please note that there are no checks made
+/// on the GMSH .msh filepath and that responsibility is left to the user.
+///
+/// \param fname --> takes a filename and instantiates Network object
+///
+// ----------------------------------------------------------------------- 
 Network::Network(string& fname) {
 
 	initialized = false;
@@ -22,12 +43,21 @@ Network::Network(string& fname) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Destructor for class network
+///
+// ----------------------------------------------------------------------- 
 Network::~Network() {
 
 	clear();
 
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Overloads assignment operator (=) to implement copy constructor
+///
+// ----------------------------------------------------------------------- 
 Network const & Network::operator=(Network const & other) {
 
 	if (this != &other) {
@@ -39,6 +69,11 @@ Network const & Network::operator=(Network const & other) {
 	
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Called by destructor of Network objects to clear variables 
+/// from memory
+///
+// ----------------------------------------------------------------------- 
 void Network::clear() {
 
 	free(R);
@@ -66,12 +101,24 @@ void Network::clear() {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief This function is for users to build custom networks. It has no 
+/// body and implements nothing. 
+///
+// ----------------------------------------------------------------------- 
 void Network::build_network() {
 	//TODO: Add small-network code
 	
 }
 
-
+// ----------------------------------------------------------------------- 
+/// \brief This function allocates memory for all class data members. 
+/// This is called by the Network constructor if the same is called using
+/// a filepath string. User is discouraged from directly calling this function.
+/// 
+/// \param fname (string) --> string of the .msh filepath
+/// 
+// -----------------------------------------------------------------------
 void Network::malloc_network(string& fname){
 	
 	read_n(n_nodes, n_elems, fname);
@@ -106,6 +153,15 @@ void Network::malloc_network(string& fname){
 	n_elems -= 3*max_nodes_on_a_side;
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief This function builds the network. It includes building PBC 
+/// bonds. The function initializes all properties required for running
+/// experiments on the instantiated Network code. This is called by constructor
+/// of a Network object. User is discouraged from directly calling this function.
+///
+/// \param fname (string) --> string of the .msh filepath
+// -----------------------------------------------------------------------
 void Network::load_network(string& fname) {
 
 	if (initialized) {
@@ -156,6 +212,12 @@ void Network::load_network(string& fname) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Implements the body of the copy constuctor. Allocates memory and
+/// does the appropriate assignments
+///
+/// \param source (Network) --> an initialized object of type Network
+// -----------------------------------------------------------------------
 void Network::copy(Network const & source) {
 
 	cracked = source.cracked;
@@ -216,6 +278,19 @@ void Network::copy(Network const & source) {
 
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Calculates forces along edges of the polymer network graph (i.e
+/// forces in each polymer). The forces are then assigned to nodes which 
+/// prepares the network for the optimization step. If update_damage is 
+/// true, the appropriate damage metric is also updated. If damage exceeds
+/// predefined thresholds, the edge is broken. In case of a sacNetwork object
+/// hidden lengths are also opened according to damage in these hidden bonds
+/// apart from end damage. The function does not return anything as it updates
+/// the objects forces directly.
+///
+/// \param update_damage (bool) --> flag to update damage
+// -----------------------------------------------------------------------
 void Network::get_forces(bool update_damage = false) {
 
 	int node1, node2;
@@ -304,6 +379,13 @@ void Network::get_forces(bool update_damage = false) {
 
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds PBC bonds to the network according to dely_allowed.
+///
+/// \param dely_allowed(float) --> Connects two nodes i and j on the two 
+/// sides of the network respectively iff $abs(y_i - y_j) < $dely_allowed
+// -----------------------------------------------------------------------
 void Network::make_edge_connections(float dely_allowed) {
 
 	std::default_random_engine seed;
@@ -327,6 +409,17 @@ void Network::make_edge_connections(float dely_allowed) {
 
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds random cracks in the Network object. This is implemented 
+/// by removing all connections and nodes that lie \emph{entirely} within
+/// the ellipses specified in alist. Please note this assumption may be
+/// relaxed and a probabilistic measure may be introduced to remove some
+/// connections so as to simulate small world networks (cluster networks)
+/// This is managed by the PROB_REMOVAL parameter in params.h 
+///
+/// \param alist (Cracklist) --> A list of ellipses
+// -----------------------------------------------------------------------
 void Network::apply_crack(Cracklist & alist) {
 	std::default_random_engine seed;
 	std::uniform_real_distribution<float> generator(0, 1);
@@ -383,7 +476,19 @@ void Network::apply_crack(Cracklist & alist) {
 }
 
 
-
+// ----------------------------------------------------------------------- 
+/// \brief Plots the graph of the network. Note the edges in the graph just
+/// signify connection between two nodes and do not represent the actual 
+/// polymer geometry in any sense. Note that this plot will be saved as .png 
+/// file in the folder specified by FLDR_STRING in params.h
+///
+/// \param iter_step (int) --> The iteration number of the experiment. This
+/// number will also be the filename for the .png file
+///
+/// \param first_time (bool) --> This just effects what quantity is mapped
+/// to the color of the graph. If True, colors represent magnitude of forces
+/// in the polymer else, they represent the damage in a polymer connection
+// -----------------------------------------------------------------------
 void Network::plotNetwork(int iter_step, bool first_time){
 	ofstream f;
 	Gnuplot gnu;
@@ -495,6 +600,12 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	gnu.reset_plot();
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Gets the active (load-bearing) edges in the Network object. 
+/// Also prints out that info to STDOUT or piped OUT
+///
+/// 
+// -----------------------------------------------------------------------
 int Network::get_current_edges(){
 	int n_elems_current = 0;
 	for(int i=0; i<n_elems; i++){
@@ -506,6 +617,12 @@ int Network::get_current_edges(){
 	return n_elems_current;
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Prints out certain statistics of the network object.
+///
+/// 
+// -----------------------------------------------------------------------
 bool Network::get_stats(){
 	int node1, node2;
 	int j, k, id; // loop variables
@@ -602,6 +719,11 @@ bool Network::get_stats(){
 	return false;
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Gets the total length of all polymer chains active in the network
+/// 
+// -----------------------------------------------------------------------
 float Network::get_weight(){
 	float sum_length = 0.0;
 	for(int i = 0; i < n_elems; i++){
@@ -613,6 +735,12 @@ float Network::get_weight(){
 	return sum_length;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Sets the total length of all polymer chains according to supplied
+/// weight parameter. Also prints out the new average polymer contour lengths
+/// 
+/// /param weight (float) --> Weight goal required.
+// -----------------------------------------------------------------------
 float Network::set_weight(float weight){
 	float curr_weight = get_weight();
 	float alpha = weight/curr_weight;
@@ -626,6 +754,12 @@ float Network::set_weight(float weight){
 	return alpha;
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Moves the top plate according to velocity supplied in vel.h
+/// 
+///
+// -----------------------------------------------------------------------
 void Network::move_top_plate(){
 	int node;
 	for(int i = 0; i<n_tside; i++){
@@ -637,6 +771,16 @@ void Network::move_top_plate(){
 	}
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Equilibriates the Network object using RMSProp algorithm due to 
+/// G. Hinton et al (a gradient based force minimization over each node). 
+/// Stops when maximum force on node is less than TOL specified in params.h
+/// or max_iter is reached
+/// 
+/// /param eta (float) --> learning rate
+/// /param alpha (float) --> history weighting parameter
+/// /param max_iter (int) --> maximum iterations to be allowed in descent
+// -----------------------------------------------------------------------
 void Network::optimize(float eta, float alpha, int max_iter){
 	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
 	float g, delR;
@@ -667,6 +811,14 @@ void Network::optimize(float eta, float alpha, int max_iter){
 	delete[] rms_history;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Writes the forces on the top plate the supplied plate_forces array
+/// 
+/// /param plate_forces (float*) --> storage array for plate_forces
+/// /param iter (int) --> force_{i} stored in plate_forces[iter*DIM + i]
+/// i = 0 ... DIM - 1
+/// /param max_iter (int) --> maximum iterations to be allowed in descent
+// -----------------------------------------------------------------------
 void Network::get_plate_forces(float* plate_forces, int iter){
 	int node;
 	for(int i=0; i<n_tside; i++){

@@ -20,7 +20,12 @@
 #include "sac_network.h"
 using namespace std;
 
-#define NSYNC 100
+#define NSYNC 100 // syncs plate_forces after NSYNC iterations
+
+/**
+@file mpi_network.h
+\brief Wrapper around the Network and sacNetwork classes to allow for MPI implementation
+*/
 
 class MPI_Network : virtual public Network, public sacNetwork{
 

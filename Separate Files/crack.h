@@ -5,6 +5,10 @@
 
 using namespace std;
 
+/**
+@file crack.h
+\brief Defines a crack in terms of 2D ellipses.
+*/
 class Crack {
 
 protected:

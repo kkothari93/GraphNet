@@ -1,9 +1,19 @@
+/**
+@file network.cpp
+\brief This file implements all functions defined in header mpi_network.h
+*/
 #include "mpi_network.h"
 
+// ----------------------------------------------------------------------- 
+/// \brief Default constructor
+// ----------------------------------------------------------------------- 
 MPI_Network::MPI_Network(): Network() {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Copy constructor
+// ----------------------------------------------------------------------- 
 MPI_Network::MPI_Network(MPI_Network const & source) {
 
 	initialized = false;
@@ -12,28 +22,31 @@ MPI_Network::MPI_Network(MPI_Network const & source) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Constructor to initialize from a Network object
+// ----------------------------------------------------------------------- 
 MPI_Network::MPI_Network(Network const & source): Network(source) {
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Constructor to initialize from a sacNetwork object
+// -----------------------------------------------------------------------
 MPI_Network::MPI_Network(sacNetwork const & source): sacNetwork(source) {
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Destructor
+///
+// -----------------------------------------------------------------------
 MPI_Network::~MPI_Network() {
 	clear();
 }
 
-MPI_Network::MPI_Network(string& fname){
-	if(SACBONDS){
-		cout<<"Making a MPI sacNetwork object\n";
-		sacNetwork(fname);
-	}
-	else{
-		cout<<"Making a MPI Network object\n";
-		Network(fname);
-	}
-}
-
-
+// ----------------------------------------------------------------------- 
+/// \brief Clears the extra variables instantiated in the MPI_Network object.
+/// Called by the destructor of the class.
+///
+// -----------------------------------------------------------------------
 void MPI_Network::clear() {
 	// free(not_moving_nodes);
 	// not_moving_nodes = NULL;
@@ -45,6 +58,11 @@ void MPI_Network::clear() {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Copies source's data members into current object. Called by copy
+/// constructor. 
+///
+// -----------------------------------------------------------------------
 void MPI_Network::copy(MPI_Network const & source) {
 
 	if(SACBONDS){Network::copy(source);}
@@ -69,11 +87,24 @@ void MPI_Network::copy(MPI_Network const & source) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Checks if a node lies in a particular partitioning of the graph
+///
+/// \param R --> A float array for a nodes position
+/// \param x_lo --> Takes the x-dimension of the left side of the partition
+/// \param x_hi
+/// \param y_lo
+/// \param_y_hi
+// -----------------------------------------------------------------------
 inline bool Rinset(float* R, float x_lo, float x_hi, float y_lo, float y_hi){
 	return (R[0] >= x_lo && R[0] < x_hi && R[1] >= y_lo && R[1] < y_hi);
 }
 
-
+// ----------------------------------------------------------------------- 
+/// \brief Rewrites moving nodes to include only nodes included in object's
+/// partition
+///
+// -----------------------------------------------------------------------
 void MPI_Network::rewrite_moving_nodes(){
 	// Takes intersection of base class' moving nodes 
 	// with chunk_nodes of MPI_class
@@ -94,6 +125,13 @@ void MPI_Network::rewrite_moving_nodes(){
 	}
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief 	Chunks the graph using squares and ranking the squares using 
+/// the process' rank in the MPI execution
+///
+/// \param world_rank --> rank of the MPI process
+/// \param world_size --> size of the MPI_Comm
+// -----------------------------------------------------------------------
 void MPI_Network::init_MPI(int world_rank, int world_size) {
 
 	int y_level = world_rank % 2 == 0? world_rank/2 : (world_rank-1)/2;
@@ -103,13 +141,7 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD : ((PAD*2.0/world_size) * (y_level+1));
 	
 	
-	// int k = 0;
-	// for (int i = 0; i < n_nodes; i+=1) {
-	// 	if (Rinset(&(R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
-	// 		// chunk_nodes[k] = i;
-	// 		k++;
-	// 	}
-	// }
+
 	chunk_nodes_len = int(n_nodes/world_size*1.3);
 	chunk_nodes = new int[chunk_nodes_len];
 	// initialization can be inside for k, increments need to be inside if loop
@@ -119,18 +151,6 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			k++;
 		}
 	}
-
-	// k = 0;
-	// for (int i = 0; i < n_elems; i+=1) {
-
-	// 	// check this condition for both edges, use Rinset
-	// 	if (!Rinset(&(R[edges[i*2]*DIM]),x_lo, x_hi, y_lo, y_hi) && !Rinset(&(R[edges[i*2+1]*DIM]),x_lo, x_hi, y_lo, y_hi)) {
-	// 		continue;
-	// 	}
-	// 	else {
-	// 		k++;
-	// 	}
-	// }
 
 	chunk_edges_len = int(n_elems/world_size*1.3);
 	chunk_edges = new int[chunk_edges_len];
@@ -150,6 +170,12 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief 	Overrides the get_forces of parent classes (Network or sacNetwork)
+/// to calculate forces in its own chunk
+///
+/// \param update_damage --> described in Network::get_forces
+// -----------------------------------------------------------------------
 void MPI_Network::get_forces(bool update_damage = false) {
 
 	int node1, node2;
@@ -261,50 +287,3 @@ void MPI_Network::get_forces(bool update_damage = false) {
 	return;
 
 }
-
-// bool MPI_Network::notmoving(int nodeid){
-// 	bool init = false;
-// 	for(int i=0;i<n_not_moving;i++){
-// 		if(nodeid == not_moving_nodes[i]){
-// 			init = true;
-// 			break;
-// 		}
-// 	}
-// 	return init;
-// }
-
-// void MPI_Network::optimize(float eta, float alpha, int max_iter) {
-
-// 	float* rms_history = new float[n_nodes*DIM](); // () allows 0.0 initialization
-// 	float g, delR;
-// 	int id, d, node;
-// 	for(int step = 0; step < max_iter; step++){
-// 		get_forces(false);
-	
-// 		if(getabsmax(forces,n_nodes*DIM)>TOL){
-// 			for(id = 0; id < chunk_nodes_len; id++){
-// 				node = chunk_nodes[id];
-// 				if (chunk_nodes[id] ==-1 || notmoving(chunk_nodes[id])) {
-// 						continue;
-// 				}				
-// 				#pragma unroll
-// 					for(d = 0; d<DIM; d++){
-// 						g = forces[DIM*node+d];
-// 						rms_history[id*DIM + d] = alpha*rms_history[id*DIM + d] + (1-alpha)*g*g;
-// 						delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
-// 						R[node*DIM + d] += delR;
-// 					}				
-// 			}
-// 		}
-// 		else{
-// 			break;
-// 		}
-// 	}
-// 	get_forces(true);
-// 	delete[] rms_history;
-// 	rms_history = NULL;
-
-// }
-
-
-
