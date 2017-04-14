@@ -1,6 +1,6 @@
 /** @mainpage
-@author Konik Kothari   kkothar3@illinois.edu
-@version Revision 1.0
+@authors {Konik Kothari kkothar3@illinois.edu, Sahil Gupta sjgupta2@illinois.edu}
+@version Revision 0.0
 @brief This codebase simulates discrete polymer network as
 graphs with and without cross-linker bond dynamics. Please 
 feel free to add or modify the code as per your usage with the

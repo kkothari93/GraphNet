@@ -63,30 +63,36 @@ public:
 	bool get_stats();
 	int get_current_edges();
 	virtual void plotNetwork(int, bool);
-
-//protected:
-
 	virtual void clear();
 	void copy(Network const & source);
-	bool cracked;
-	//int DIM;
-	int n_nodes;
-	int n_elems;
-	int n_rside, n_lside, n_bside, n_tside;
-	float * R; //n_nodes*DIM
-	int * edges; //n_elems*2
-	float * forces; //n_nodes*DIM
-	float * damage;// n_nodes
-	float * L; //n_elems
-	bool* PBC; //n_elems
-	int* lsideNodes; //max_nodes_on_a_side*2
-	int* rsideNodes;
-	int* tsideNodes;
-	int* bsideNodes;
-	bool initialized;
+
+	bool cracked; 		///<Flag to check if the network has cracks
+	int n_nodes; 		///<Stores number of crosslinker nodes in the network
+	int n_elems; 		///<Stores number of polymer connections in the network
+
+	int n_rside; 		///<Stores number of crosslinker nodes on the right edge of the network sample
+	int n_lside; 		///<Stores number of crosslinker nodes on the left edge of the network sample
+	int n_bside; 		///<Stores number of crosslinker nodes on the bottom edge of the network sample
+	int n_tside; 		///<Stores number of crosslinker nodes on the top edge of the network sample
+
+	float * R; 			///<Stores the position of all nodes of the graph in a flat n_nodes*DIM size array
+	int * edges; 		///<Stores the i,j pairs that form edges, size is n_elems*2
+
+	float * forces; 	///<Stores the forces on all nodes of the network in a flat n_nodes*DIM size array
+	float * damage; 	///<Stores the damage in each edge of the network
+	float * L; 			///<Stores the contour length of the edge
+	bool* PBC; 			///<Tag to check if an edge is a periodic boundary condition edge
+
+	int* lsideNodes; 	///<Stores index of crosslinker nodes on the left edge of the network sample
+	int* rsideNodes; 	///<Stores index of crosslinker nodes on the right edge of the network sample
+	int* tsideNodes; 	///<Stores index of crosslinker nodes on the top edge of the network sample
+	int* bsideNodes; 	///<Stores index of crosslinker nodes on the bottom edge of the network sample
+	
+	bool initialized;	///<Internal variable to check if Network object is initialized
+	
 	//add moving nodes to speed up force
-	int* moving_nodes;
-	int n_moving;
+	int* moving_nodes;	///<Stores index of all nodes where no boundary condition is applied (i.e. they participate in optimization)
+	int n_moving; 		///<Stores number of moving nodes
 };
 
 #endif
