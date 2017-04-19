@@ -41,6 +41,10 @@ def gen_param_file(pdict, fldr_string):
 class xlreader():
 
     def __init__(self, fname):
+        """ Initializes the xlreader class
+
+        @ fname: takes the parameter excel file and uses the same to read the parameters 
+        """
         self.__wb = xl.load_workbook(filename=fname)
         self.ws = self.__wb.active
         self.columns = self.ws.max_column
@@ -49,26 +53,36 @@ class xlreader():
         print "Ready!"
 
     def setup_experiments(self):
+        """ Reads all the parameter configurations given in the excel file.
+        Note: Checks if the column is empty only on the basis of the first cell
+        of the column
+
+        """
         list_of_params = []
         alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for j in range(1, self.columns):
             col = alphabet[j]
-            list_of_params.append(self.read_column(col))
+            if(self.ws[col+str(1)].value is not None):
+                list_of_params.append(self.read_column(col))
+            else:
+                break
+        print("Read upto column %s"%col)
         return list_of_params
 
     def read_column(self, column='B'):
+        """ Reads a single column specified by column argumnet upto object's max rows
+        Does not check for emptiness of a cell.
+        """
         params_dict = {}
         for i in range(1, self.rows + 1):
-            # if self.ws['A'+str(i)].value is None:
-            #     print("%d rows read!" % (i-1))
-            #     break
-            # else:
             params_dict[
                 self.ws['A'+str(i)].value] = self.ws[column+str(i)].value
         return params_dict
 
     def compile(self,n):
-        # TODO: subprocess for run
+        """ Runs the makefile to generate folders and executables for each configuration
+
+        """
         for i, param in enumerate(self.param_list):
           fldr_string = '"set%d"'%(n+i)
           fldr_name = "set%d"%(n+i)
@@ -79,6 +93,11 @@ class xlreader():
         return None
 
 def main(n):
+    """Main script
+
+    Takes in parameter n to identify where the set indexing will start
+    
+    """
     a = xlreader("param_list.xlsx")
     a.compile(n)
 
