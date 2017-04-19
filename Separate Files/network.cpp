@@ -831,3 +831,92 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	}
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Dumps the network information for an iteration in a file. 
+/// Filename would be <FLDR_STRING>.txt with <FLDR_STRING taken from params.h
+/// If <FLDR_STRING>.txt exists, <FLDR_STRING>_i.txt would be created where i
+/// is an integer decided based on copies present in current folder. 
+/// 
+/// /param iter The iteration number for the simulation
+// -----------------------------------------------------------------------
+void Network::dump(int iter, bool first_time){
+	ofstream logger;
+	std::time_t result = std::time(nullptr);
+	string fname = FLDR_STRING;
+	if(first_time){
+		int c = filename(fname);
+		if(c!=-1){
+			fname = fname + "_" + std::to_string(c);
+		}
+	}
+	fname = fname+".txt";
+	logger.open(fname, ios_base::app);
+
+	if(first_time){
+		// If opened for the first time write the params
+		logger<<"Network snapshots"<<iter<<"\n";
+		logger<<"File created at "<<std::asctime(std::localtime(&result));
+		logger<<"PARAMS:\n";
+
+		logger<<"Sim dimension : "<<DIM<<"\n";
+		logger<<"Simulation time : "<<SIM_TIME<<"\n";
+		logger<<"Simulation time-step : "<<TIME_STEP<<"\n";
+		logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
+		logger<<"MAXBOUND : "<<MAXBOUND<<"\n";
+
+		logger<<"Disorder characteristics : "<<"\n";
+		logger<<" -- L_MEAN : "<<L_MEAN<<"\n";
+		logger<<" -- L_STD : "<<L_STD<<"\n";
+		logger<<"Others : SACBONDS = "<<SACBONDS<<"; IMPLEMENT_PBC = "<<IMPLEMENT_PBC<<"\n";
+		logger<<"Rate damage : "<<RATE_DAMAGE<<"\n";		
+		logger<<"Cracked? : "<<CRACKED<<"; "<<PROB_REMOVAL<<"\n";
+		logger<<"-------------------------------------------------\n\n";
+		
+		logger<<"CONSTANTS:\n";
+		logger<<"Persistence length: "<<b_poly<<"\n";
+		logger<<"Temperature: "<<T<<"\n";
+		logger<<"End bond a: "<<ae<<"\n";
+		logger<<"End bond delx: "<<delxe<<"\n";
+		logger<<"Hidden bond a: "<<af<<"\n";
+		logger<<"Hidden bond delx: "<<delxf<<"\n";
+		logger<<"-------------------------------------------------\n\n";
+
+	}
+	if(!first_time){   
+		logger<<"INFO FOR ITER\n"<<iter<<endl;
+	    // Write R
+	    logger<<"START NODE POSITIONS\n";
+		for(int i = 0; i < n_nodes; i++){
+			logger<<i<<"\t";
+			for(int j = 0; j< DIM; j++){
+				logger<<R[i*DIM+j]<<"\t";
+			}
+			logger<<"\n";
+		}
+		logger<<"END NODE POSITIONS\n";
+
+		//write edges | damage | PBC_status 
+		logger<<"START ACTIVE EDGES\n";
+		for(int i = 0; i < n_elems; i++){
+			if(edges[2*i]!=-1 && edges[2*i+1]!=-1){
+				//Note i is then the original edge index
+				logger<<i<<"\t"<<edges[2*i]<<"\t"<<edges[2*i+1]<<"\t"<<damage[i]<<"\t"<<PBC[i]<<"\n";
+			}
+		}
+		logger<<"END ACTIVE EDGES\n";
+
+		//write forces on nodes
+		logger<<"START NODE FORCES\n";
+		for(int i = 0; i < n_nodes; i++){
+			logger<<i<<"\t";
+			for(int j = 0; j< DIM; j++){
+				logger<<forces[i*DIM+j]<<"\t";
+			}
+			logger<<"\n";
+		}
+		logger<<"END NODE FORCES\n\n";
+	}
+
+    logger.close();
+	cout<<"Dumped everything in "<<fname<<"!\n";
+}

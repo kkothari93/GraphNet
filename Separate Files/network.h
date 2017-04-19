@@ -32,7 +32,7 @@ const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
 const float vel[DIM] = {vel_x, vel_y};
 
 class Network {
-/**
+/*!<
 \brief Implements a network of discrete chains.
 
 This is the base class that takes in a GMSH .msh file to build 
@@ -65,6 +65,7 @@ public:
 	virtual void plotNetwork(int, bool);
 	virtual void clear();
 	void copy(Network const & source);
+	void dump(int,bool first_time = false);
 
 	bool cracked; 		///<Flag to check if the network has cracks
 	int n_nodes; 		///<Stores number of crosslinker nodes in the network

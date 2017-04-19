@@ -1,3 +1,10 @@
+/**
+@file helper_functions.cpp
+\brief Implements functions prototyped in helper_functions.h. Functions
+implemented here are not expected to be called by user. Hence, only brief 
+descriptions without parameter descriptions is attached.
+*/
+
 // Contains all the helper functions needed
 
 #include <iostream>
@@ -17,15 +24,7 @@
 #include <cstring>
 #include <stddef.h>
 
-//#include "gnuplot_i.hpp"
 using namespace std;
-
-/**
-@file helper_functions.cpp
-\brief Implements functions prototyped in helper_functions.h. Functions
-implemented here are not expected to be called by user. Hence, only brief 
-descriptions without parameter descriptions is attached.
-*/
 
 #include "vel.h"
 #include "helper_funcs.h"
@@ -302,4 +301,29 @@ void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int 
 		damage[i] = 0.0;
 		PBC[i] = false;
 	}	
+}
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Gives an integer value to be appended to the network dump 
+/// filename
+///
+// -----------------------------------------------------------------------
+int filename(const string& fname){
+	string temp = fname + ".txt";
+	std::ifstream f(temp); // Associate stream f to file
+	bool exists = f.good();
+	int c = 0;
+	if(!exists){
+		return -1;
+	}
+	else{
+		while(f.good()){
+			f.close(); //Dissociate stream from file
+			temp = fname + "_" + std::to_string(c) + ".txt"; // Overwrite temp
+			f.open(temp);
+			c++;
+		}
+		return c;
+	}
 }

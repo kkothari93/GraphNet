@@ -24,7 +24,7 @@ defined here.
 #include <stddef.h>
 #include "vel.h"
 #include "params.h"
-//#include "gnuplot_i.hpp"
+
 using namespace std;
 
 
@@ -67,6 +67,8 @@ void read_n(int& n_nodes, int& n_elems, string& fname);
 void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname);
 
 void __init__(float* L, float* damage, bool* PBC, int n_elems);
+
+int filename(const string&);
 
 inline void normalize_vector(float* result, const float* vec){
 	float norm = getnorm(vec);
