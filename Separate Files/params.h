@@ -2,8 +2,8 @@
 #define __params__
 
 #define DIM 2
-#define TIME_STEP 1e-2
-#define SIM_TIME 250
+#define TIME_STEP 1e-4
+#define SIM_TIME 100
 #define TOL 1e-6
 #define STEPS int(SIM_TIME/TIME_STEP)
 #define L_MEAN 250.0f
@@ -12,7 +12,7 @@
 #define PAD MAXBOUND*1.03
 #define SACBONDS false
 #define IMPLEMENT_PBC true
-#define FLDR_STRING "set19"
+#define FLDR_STRING "set16"
 #define CRACKED true
 #define RATE_DAMAGE true
 
