@@ -39,7 +39,7 @@ class sacNetwork : virtual public Network{
 		void clear();
 		void malloc_network(string&);
 		void load_network(string&);
-		virtual void get_forces(bool);
+		virtual void get_forces(bool) override;
 
 };
 

@@ -142,13 +142,19 @@ int main(int argc, char* argv[]) {
 	  	float* plate_forces = NULL;
 
   
-		main_network->get_weight();
 		
 		bool should_stop = main_network->get_stats();
+		if(main_network->get_weight()==0){
+			cout<<"Problem with MPI constructor! Reading 0 weight! Exiting"<<endl;
+			MPI_Finalize();
+			return 0;
+		}
+
 		if(should_stop || world_size % 2 == 1) {
 			//Always take even number of processors
 			cout<<"Got stop signal! stop flag: \t"<<should_stop<<\
 				"world_size: "<<world_size<<endl;
+			MPI_Finalize();
 			return 0;
 		}
 	    
@@ -159,10 +165,9 @@ int main(int argc, char* argv[]) {
 		}
 		
 		// cout<<"world rank:  "<<world_rank<<main_network->n_elems<<endl;
+		MPI_Barrier(MPI_COMM_WORLD);
 		main_network->init_MPI(world_rank, world_size);
-		// for(int d=0; d<main_network->n_elems;d++){
-		// 	assert(main_network->L[d]);
-		// }
+
 		cout<<__LINE__<<endl;
 		MPI_Bcast(main_network->L, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 		MPI_Bcast(main_network->PBC, main_network->n_elems, MPI_C_BOOL, 0, MPI_COMM_WORLD); 
@@ -170,13 +175,14 @@ int main(int argc, char* argv[]) {
 		size_t r_size = main_network->n_nodes * DIM * world_size;
 		float * R_buffer; 
 		R_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the R from all nodes
+		
 		float * forces_buffer; 
 		forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the forces from all nodes
 		// Force buffer needed to calculate plate_forces
+		
 		int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 		cout<<"world rank: "<<world_rank<< " chunk len = "<<main_network->chunk_nodes_len<<endl;
-		// TODO: Sync forces every nth iteration
-		
+				
 		MPI_Gather(main_network->chunk_nodes, main_network->chunk_nodes_len, MPI_INT, chunk_nodes_buffer, main_network->chunk_nodes_len, MPI_INT, 0, MPI_COMM_WORLD);
 
 		// Uniqueness of partition check
@@ -205,9 +211,10 @@ int main(int argc, char* argv[]) {
 		cout << "World rank proc "<<world_rank << " starting the loop:" << endl;
 
 		int iter = 0; // needed to write forces later
+
 		clock_t t = clock(); 
 		for(iter = 0; iter<STEPS; iter++){
-			if((iter+1)%100 == 0){ 
+			if((iter+1)%43 == 0){ 
 				cout<<(iter+1)<<endl; 
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
@@ -221,13 +228,15 @@ int main(int argc, char* argv[]) {
 
 
 			MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-			
+			MPI_Barrier(MPI_COMM_WORLD);
+						
 			if((iter+1)%NSYNC == 0){
 				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			}
 
 			// syncing R and forces
 			if (world_rank == 0) {
+				cout<<iter<<endl;
 				int node_to_sync  = 0;
 				for (int i = 0; i < world_size; i += 1) {
 					for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
@@ -251,6 +260,7 @@ int main(int argc, char* argv[]) {
 					main_network->get_plate_forces(plate_forces, iter);
 				}
 				main_network->move_top_plate();
+				cout<<iter<<endl;
 			}
 
 			MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
@@ -261,29 +271,6 @@ int main(int argc, char* argv[]) {
 		} // the simulation loop ends here
 
 
-
-		//cout<<__LINE__<<endl;
-		//sync forces at the end??
-		// MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		// if (world_rank == 0) {
-		// 	int node_to_sync  = 0;
-		// 	for (int i = 0; i < world_size; i += 1) {
-		// 		for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
-		// 			node_to_sync = chunk_nodes_buffer[j];
-		// 			if (node_to_sync == -1) {
-		// 				break;
-		// 			}
-		// 			else{
-		// 				main_network->forces[DIM * node_to_sync] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync];
-		// 				main_network->forces[DIM * node_to_sync + 1] = forces_buffer[main_network->n_nodes * DIM * i + DIM * node_to_sync + 1];
-		// 			}
-		// 		}
-		// 	}
-		// 	main_network->get_plate_forces(plate_forces, STEPS);
-		// 	//main_network->move_top_plate();
-		// }
-
-
 		if (world_rank == 0) {
 			string sb = SACBONDS ? "true" : "false" ; 
 			string fname = FLDR_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
@@ -291,12 +278,13 @@ int main(int argc, char* argv[]) {
 			free(plate_forces);
 			plate_forces = NULL;
 		}
-		// Needed to not have double free, corruption error
-		free(R_buffer);
+		
+		//Needed to not have double free, corruption error
+		delete[] R_buffer;
 		R_buffer = NULL;
-		free(forces_buffer);
+		delete[] forces_buffer;
 		forces_buffer = NULL;
-		free(chunk_nodes_buffer);
+		delete[] chunk_nodes_buffer;
 		chunk_nodes_buffer = NULL;
 		delete main_network;
 		main_network = NULL;

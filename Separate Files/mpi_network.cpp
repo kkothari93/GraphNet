@@ -24,14 +24,24 @@ MPI_Network::MPI_Network(MPI_Network const & source) {
 
 // ----------------------------------------------------------------------- 
 /// \brief Constructor to initialize from a Network object
+/// Note: This constructor uses initialization lists for initializing the 
+/// member data.
 // ----------------------------------------------------------------------- 
 MPI_Network::MPI_Network(Network const & source): Network(source) {
 }
 
 // ----------------------------------------------------------------------- 
 /// \brief Constructor to initialize from a sacNetwork object
+/// Note: Since MPI_Network virtually (public) inherits from Network and 
+/// publically inherits from sacNetwork (which itself virtual public 
+/// inherits from Network), we need to initialize the base class (Network)
+/// object too. The constructors for virtual base classes are always called
+/// from the most derived class, using any arguments it might pass in. So,
+/// sacNetwork copy constructor will not call the base Network copy constructor.
+/// Therefore, we need to construct this object using base Network's copy 
+/// constructor explicitly.
 // -----------------------------------------------------------------------
-MPI_Network::MPI_Network(sacNetwork const & source): sacNetwork(source) {
+MPI_Network::MPI_Network(sacNetwork const & source): Network(source), sacNetwork(source) {
 }
 
 // ----------------------------------------------------------------------- 
@@ -65,8 +75,8 @@ void MPI_Network::clear() {
 // -----------------------------------------------------------------------
 void MPI_Network::copy(MPI_Network const & source) {
 
-	if(SACBONDS){Network::copy(source);}
-	else{sacNetwork::copy(source);}
+	if(SACBONDS){sacNetwork::copy(source);}
+	else{Network::copy(source);}
 
 	// n_not_moving = source.n_not_moving;
 	// not_moving_nodes = (int*)malloc(sizeof(int)*n_not_moving);
@@ -141,7 +151,7 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD : ((PAD*2.0/world_size) * (y_level+1));
 	
 	
-
+	cout<<n_nodes<<endl;
 	chunk_nodes_len = int(n_nodes/world_size*1.3);
 	chunk_nodes = new int[chunk_nodes_len];
 	// initialization can be inside for k, increments need to be inside if loop
@@ -226,20 +236,12 @@ void MPI_Network::get_forces(bool update_damage = false) {
 			// get force on node1 due to node2
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
-			// if (s>L[j]){
-			// 	cout<<"Something's wrong for edge "\
-			// 	<<j<< ", nodes "<<node1 << " - " <<\
-			// 	node2<<": s = "<<s<<", L = "<<L[j]<<"\n";
-			// }
 			force = force_wlc(s, L[j]);
 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		else{
 			s = dist(r1, r2);
-			// if (s>L[j]){
-			// 	cout<<"Something's wrong for edge "<<j<< ", nodes "<<node1 << " - " <<node2<<": s = "<<s<<", L = "<<L[j]<<"\n";
-			// }
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
 			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
@@ -254,7 +256,6 @@ void MPI_Network::get_forces(bool update_damage = false) {
 		//update damage if needed
 		if (update_damage){
 			if(RATE_DAMAGE){
-				damage[j] += kfe(force)*TIME_STEP;
 				if(SACBONDS){
 					if(m[j] > 0){
 						sacdamage[j] += kf(force)*TIME_STEP;
@@ -262,9 +263,12 @@ void MPI_Network::get_forces(bool update_damage = false) {
 						L[j] += (L_MEAN - L[j])/m[j] ; 
 						m[j] -= 1;
 						sacdamage[j] = 0.0;
+						force = force_wlc(s, L[j]);
 						}
 					}
 				}
+
+				damage[j] += kfe(force)*TIME_STEP;
 				//remove edge ... set to special value
 				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "

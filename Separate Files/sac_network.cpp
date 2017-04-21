@@ -141,15 +141,16 @@ void sacNetwork::get_forces(bool update_damage = false) {
 
 		//update damage if needed
 		if (update_damage){
-			damage[j] += kfe(force)*TIME_STEP;
 			if(m[j] > 0){
 				sacdamage[j] += kf(force)*TIME_STEP;
 				if(sacdamage[j] > 1.0){
 					L[j] += (L_MEAN - L[j])/m[j] ; 
 					m[j] -= 1;
 					sacdamage[j] = 0.0;
+					force = force_wlc(s, L[j]);
 				}
 			}
+			damage[j] += kfe(force)*TIME_STEP;
 			
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){

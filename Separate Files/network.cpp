@@ -332,7 +332,7 @@ void Network::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			//if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 			// subtract back the PBC_vector to get original node position
 			// #pragma unroll
@@ -344,7 +344,7 @@ void Network::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
+			//if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
@@ -421,6 +421,8 @@ void Network::make_edge_connections(float dely_allowed) {
 /// \param alist (Cracklist) --> A list of ellipses
 // -----------------------------------------------------------------------
 void Network::apply_crack(Cracklist & alist) {
+
+	cracked = true;
 	std::default_random_engine seed;
 	std::uniform_real_distribution<float> generator(0, 1);
 	float equation = 0;
@@ -507,10 +509,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 			node1 = edges[j * 2]; 
 			node2 = edges[j * 2 + 1];
 			
-			// check if pair exists
-			if(node1 == -1 || node2 == -1) {
-				continue;
-			}
+			// // check if pair exists
+			// if(node1 == -1 || node2 == -1) {
+			// 	continue;
+			// }
 
 			// read the positions
 			#pragma unroll
@@ -532,7 +534,7 @@ void Network::plotNetwork(int iter_step, bool first_time){
 			else{
 				s = dist(r1, r2);
 			}
-			
+		
 			c = s/L[j];
 			for(int d = 0; d<DIM; d++){
 					f<<R[node1*DIM+d]<<"\t";
@@ -638,6 +640,9 @@ bool Network::get_stats(){
 	float shortage = 0.0;
 	int c = 0;
 
+	if(n_elems <= 0){
+		cout<<"Oops! Something's wrong! n_elems is not correct"<<endl;
+	}
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
 		node1 = edges[j * 2]; 
