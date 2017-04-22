@@ -76,6 +76,10 @@ int main(int argc, char* argv[]) {
 
 	//*argv[2] if is working now. Do not change
 	if (*argv[2]!='1') {
+		for(int i=0; i<test_network.n_elems; i++){
+			cout<<test_network.edges[2*i]<<", "<<test_network.edges[2*i+1]<<endl;
+		}
+		return 0;
 		cout<<"Running serial version of the code: \n";
 		
 		float weight_goal = 2.30401e6; // weight of similarly sized triangular mesh network
@@ -214,7 +218,7 @@ int main(int argc, char* argv[]) {
 
 		clock_t t = clock(); 
 		for(iter = 0; iter<STEPS; iter++){
-			if((iter+1)%43 == 0){ 
+			if((iter+1)%100 == 0){ 
 				cout<<(iter+1)<<endl; 
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
@@ -228,8 +232,8 @@ int main(int argc, char* argv[]) {
 
 
 			MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-			MPI_Barrier(MPI_COMM_WORLD);
-						
+			//MPI_Barrier(MPI_COMM_WORLD);
+
 			if((iter+1)%NSYNC == 0){
 				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			}

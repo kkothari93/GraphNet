@@ -12,7 +12,7 @@
 #define PAD MAXBOUND*1.03
 #define SACBONDS false
 #define IMPLEMENT_PBC true
-#define FLDR_STRING "set16"
+#define FLDR_STRING "set17"
 #define CRACKED true
 #define RATE_DAMAGE false
 
