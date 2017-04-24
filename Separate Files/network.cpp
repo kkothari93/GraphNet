@@ -586,7 +586,7 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	string xrange = convert.str();
 	string bs = "/";
 	string path = FLDR_STRING + bs + std::to_string(iter_step) + ".png";
-
+	
 	gnu.cmd("set xrange " + xrange);
 	gnu.cmd("load 'viridis.pal'");
 	gnu.cmd("set key off");
@@ -600,6 +600,7 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	gnu.cmd("replot");
 	gnu.cmd("set term x11");
 	gnu.reset_plot();
+	
 }
 
 // ----------------------------------------------------------------------- 
