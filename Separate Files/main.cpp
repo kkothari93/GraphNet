@@ -222,13 +222,16 @@ int main(int argc, char* argv[]) {
 					chunk_sum += chunk_nodes_buffer[i];
 				}
 			}
+			
 			int nn = main_network->n_nodes;
 			int id;
 			for(int d = 0 ; d<main_network->chunk_edges_len; d++){
 				id = main_network->chunk_edges[d];
-				if(main_network->edges[2*id] >= nn || main_network->edges[2*id + 1] >= nn){
-							cout<<"Node is "<<main_network->edges[2*id]<<" for index "<<id<<endl;
+				if(id!=-1){
+					if(main_network->edges[2*id] >= nn || main_network->edges[2*id + 1] >= nn){
+								cout<<"Node is "<<main_network->edges[2*id]<<" for index "<<id<<endl;
 					}	
+				}
 			}
 			if (chunk_sum != (nn*nn - nn)/2 ) {
 				cout << chunk_sum << " | "<< (nn*nn - nn)/2<<endl; 
@@ -243,10 +246,11 @@ int main(int argc, char* argv[]) {
 
 		clock_t t = clock(); 
 		for(iter = 0; iter<STEPS; iter++){
-			if((iter+1)%100 == 0){ 
+			if((iter+1)%100 == 0){
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 				if(world_rank==0){
+					cout<<iter+1<<endl; 
 					main_network->plotNetwork(iter, false);
 					main_network->get_stats();
 				}
@@ -283,7 +287,7 @@ int main(int argc, char* argv[]) {
 				}
 				if((iter+1)%NSYNC == 0){
 					cout << "Synced forces" << endl;
-					main_network->get_plate_forces(plate_forces, iter);
+					main_network->get_plate_forces(plate_forces, iter/NSYNC);
 				}
 				main_network->move_top_plate();
 			}

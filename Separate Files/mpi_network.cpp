@@ -152,22 +152,27 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD_Y : ((PAD_Y*2.0/world_size) * (y_level+1));
 	
 	
-	cout<<n_nodes<<endl;
 	chunk_nodes_len = int(n_nodes/world_size*1.3);
 	chunk_nodes = new int[chunk_nodes_len];
 	
 	// initialization can be inside for loop for k, increments need to be inside if loop
-	for (int i = 0,k=0; i < n_nodes; i+=1) {
+	int k = 0;
+	for (int i = 0; i < n_nodes; i+=1) {
 		if (Rinset(&(R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			chunk_nodes[k] = i;
 			k++;
 		}
 	}
 
+	for(; k< chunk_nodes_len; k++){
+		chunk_nodes[k] = -1;
+	}
+
 	chunk_edges_len = int(n_elems/world_size*2);
 	chunk_edges = new int[chunk_edges_len];
 	int node1 , node2;
-	for (int i = 0, k=0; i < n_elems; i+=1) {
+	k = 0;
+	for (int i = 0; i < n_elems; i+=1) {
 		node1 = edges[i*2];
 		node2 = edges[i*2 + 1];
 
@@ -180,10 +185,12 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			}
 			else {
 				chunk_edges[k] = i;
-	
 				k++;
 			}
 		}
+	}
+	for(;k<chunk_edges_len;k++){
+		chunk_edges[k] = -1;
 	}
 
 
