@@ -159,15 +159,14 @@ Cracklist::Cracklist(Crack& a){
 /// random axes lengths and random orientations.
 ///
 /// \param n -->  Number of random ellipses to be spwaned within object
-/// \param bound --> Maximum bound, generally equals MAXBOUND
 // -----------------------------------------------------------------------
-Cracklist::Cracklist(int n, float bound){
+Cracklist::Cracklist(int n){
 	this->dim = 2;
 	n_cracks = n;
 	listofCracks = new Crack[n];
 
 	std::default_random_engine gen;
-	//std::uniform_int_distribution<int> n_dist(2,4);
+
 	std::uniform_real_distribution<float> a_dist(0.01,0.02);
 	std::uniform_real_distribution<float> b_dist(0.05,0.06);
 	std::uniform_real_distribution<float> angle(0.0,PI/2.0);
@@ -175,7 +174,9 @@ Cracklist::Cracklist(int n, float bound){
 	std::uniform_real_distribution<float> cy_dist(0.2, 0.8);
 	//std::uniform_real_distribution<float> cz(-PI/2.0,PI/2.0);
 	
-	//int n = n_dist(gen);
+	float bound = (MAXBOUND_X + MAXBOUND_Y)/2.0; // ~arbitrary value here. <br>
+	// You think you can do better...ah, well you're right!
+
 	float ang = angle(gen);
 	float a = a_dist(gen)*bound;
 	float b = b_dist(gen)*bound;
@@ -186,7 +187,6 @@ Cracklist::Cracklist(int n, float bound){
 
 	for(int i=0; i < n_cracks; i++){
 		listofCracks[i].setter(cx,cy,a,b,s,c);
-		//printf("%d\n",__LINE__);
 		listofCracks[i].print_info();
 		ang = angle(gen);
 		a = a_dist(gen)*bound;

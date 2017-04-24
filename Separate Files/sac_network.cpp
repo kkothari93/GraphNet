@@ -115,8 +115,6 @@ void sacNetwork::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; 
-				 force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 			// subtract back the PBC_vector to get original node position
 			// #pragma unroll
@@ -128,8 +126,6 @@ void sacNetwork::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; 
-				force =0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		#pragma unroll
@@ -203,12 +199,15 @@ void sacNetwork::load_network(string& fname) {
 
 	cout<<"Reading the mesh...\n";
 	take_input(R, edges, n_nodes, n_elems, fname);
+
+	// remove duplicates
+	remove_duplicates(n_elems);
+
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
 
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, \
-		n_lside, n_rside, n_tside, n_bside, n_nodes);
+	side_nodes();
 
 
 	// moving nodes

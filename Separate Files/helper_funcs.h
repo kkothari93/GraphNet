@@ -27,11 +27,6 @@ defined here.
 
 using namespace std;
 
-
-void side_nodes(float* R,\
-	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\
-	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n);
-
 inline int get_num_vertices(int elem_type){
 	switch(elem_type){
 		//case 1: return 2;
@@ -102,7 +97,7 @@ inline void unitvector(float* result, float* r1, float* r2){
 inline float force_wlc(float x, float L){
 	float t = x / L;
 	if (t < 0.99){ return kB*T / b_poly * (t + 1.0 / 4.0 / pow((1 - t), 2) - 1.0 / 4.0); }
-	else { return 999999.0; }
+	else { return 1000; }
 }
 
 inline void convert_to_vector(float* result, const float mag, const float* direction){
@@ -153,7 +148,7 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 	logger<<"Simulation time : "<<SIM_TIME<<"\n";
 	logger<<"Simulation time-step : "<<TIME_STEP<<"\n";
 	logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
-	logger<<"MAXBOUND : "<<MAXBOUND<<"\n";
+	logger<<"MAXBOUND : "<<MAXBOUND_X<<"\t"<<MAXBOUND_Y<<"\n";
 
 	logger<<"Disorder characteristics : "<<"\n";
 	logger<<" -- L_MEAN : "<<L_MEAN<<"\n";

@@ -123,7 +123,6 @@ void Network::malloc_network(string& fname){
 	
 	read_n(n_nodes, n_elems, fname);
 
-
 	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
 	// add memory for side connections
 	n_elems += 3*max_nodes_on_a_side;
@@ -138,10 +137,6 @@ void Network::malloc_network(string& fname){
 	damage = (float*)malloc(n_elems*sf);
 	L = (float* )malloc(n_elems*sf);
 	PBC = (bool* )malloc(n_elems*sb);
-	lsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	rsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	bsideNodes = (int* )malloc(max_nodes_on_a_side*si);
-	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
 
 	// 	initialise n_xside for side nodes
 	n_rside = 0;
@@ -153,6 +148,89 @@ void Network::malloc_network(string& fname){
 	n_elems -= 3*max_nodes_on_a_side;
 }
 
+// ----------------------------------------------------------------------- 
+/// \brief Gives the boundary nodes for a network.
+///
+// -----------------------------------------------------------------------
+void Network::side_nodes(){
+
+	// make the list of side nodes
+	for(int i=0; i<n_nodes; i++){
+		if(fabs(R[i*DIM]-0.0)<TOL){n_lside++;}
+		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){n_rside++;}
+		if(fabs(R[i*DIM + 1]-0.0)<TOL){n_bside++;}
+		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){n_tside++;}
+	}
+
+	size_t si = sizeof(int);
+	lsideNodes = (int* )malloc(n_lside*si);
+	rsideNodes = (int* )malloc(n_rside*si);
+	bsideNodes = (int* )malloc(n_bside*si);
+	tsideNodes = (int* )malloc(n_tside*si);
+	
+	n_lside = 0; n_rside = 0; n_bside = 0; n_tside=0;
+
+	for(int i=0; i<n_nodes; i++){
+		if(fabs(R[i*DIM]-0.0)<TOL){lsideNodes[n_lside]=i; n_lside++;}
+		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){rsideNodes[n_rside]=i; n_rside++;}
+		if(fabs(R[i*DIM + 1]-0.0)<TOL){bsideNodes[n_bside]=i; n_bside++;}
+		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
+	}
+}
+
+// ----------------------------------------------------------------------- 
+/// \brief Removes duplicate edges. A much more efficient version can be made
+/// of this program. But it is called only once in the simulation, so one 
+/// should be fine.
+// -----------------------------------------------------------------------
+void Network::remove_duplicates(int& n_elems){
+	int counter = 0;
+	int node1, node2;
+	int d_node1, d_node2, i,k;
+
+	for(i=0;i<n_elems-1;i++){
+		node1 = edges[2*i];
+		node2 = edges[2*i+1];
+		if(node1!=-2 && node2!=-2){
+			for(int j=i+1; j<n_elems; j++){
+				d_node1 = edges[2*j];
+				d_node2 = edges[2*j+1];
+				if((node1==d_node1 && node2==d_node2) || (node2==d_node1 && node1==d_node2)){
+					edges[2*j] = -2; // -1 token reserved for broken edges. -2 used for readable code
+					edges[2*j+1] = -2; // -1 token reserved for broken edges. -2 used for readable code
+				}
+			}
+			counter++;
+		}
+	}
+	cout<<counter<<endl;
+	int* buffer = new int[2*counter];
+	for(i=0, k=0;i<n_elems;i++){
+		node1 = edges[2*i];
+		node2 = edges[2*i+1];
+		if(node1!=-2 && node2!=-2){
+			buffer[2*k] = node1;
+			buffer[2*k+1] = node2;
+			k++;
+		}
+	}
+
+	for(i=0, k=0;i<n_elems;i++){
+		if(k<counter){
+			edges[2*i] = buffer[2*k];
+			edges[2*i+1] = buffer[2*k+1];
+			k++;
+		}
+		else{
+			edges[2*i] = -1;
+			edges[2*i+1] = -1;
+		}
+	}
+	cout<<n_elems-counter<<" duplicates removed!\n";
+	n_elems = counter;
+	delete[] buffer;
+	buffer = NULL;
+}
 
 // ----------------------------------------------------------------------- 
 /// \brief This function builds the network. It includes building PBC 
@@ -181,12 +259,18 @@ void Network::load_network(string& fname) {
 
 	cout<<"Reading the mesh...\n";
 	take_input(R, edges, n_nodes, n_elems, fname);
+	// remove duplicate edges
+	remove_duplicates(n_elems);
+
+
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
 
-	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes, \
-		n_lside, n_rside, n_tside, n_bside, n_nodes);
+
+
+	// initialize boundary node arrays
+	side_nodes();
 
 
 	// moving nodes
@@ -208,8 +292,9 @@ void Network::load_network(string& fname) {
 
 	if(IMPLEMENT_PBC){
 		this->make_edge_connections(15.0);
-		cout<<"Number after new connections made: "<<n_elems<<endl;}
-
+		cout<<"Number after new connections made: "<<n_elems<<endl;
+	}
+	cout<<__LINE__<<endl;
 }
 
 // ----------------------------------------------------------------------- 
@@ -427,7 +512,7 @@ void Network::apply_crack(Cracklist & alist) {
 	std::uniform_real_distribution<float> generator(0, 1);
 	float equation = 0;
 	//make clusters
-	vector<int> within_circle;
+	//vector<int> within_circle;
 	vector<int> nodes_to_remove;
 	int edges_removed = 0; 
 	int node1, node2;
@@ -437,7 +522,6 @@ void Network::apply_crack(Cracklist & alist) {
 	float si,co;
 	for(int ci = 0; ci < alist.n_cracks; ci++){
 		crack.setter(alist[ci]);
-		
 		for(int i=0; i<n_nodes; i++){
 			x = R[i*DIM];
 			y = R[i*DIM+1];
@@ -445,22 +529,22 @@ void Network::apply_crack(Cracklist & alist) {
 			y -= crack.c[1];
 			si = crack.trig[0];
 			co = crack.trig[1];
-			equation = pow(x*co + y*si, 2)/pow(crack.a[0],2) + \
-						pow(x*si - y*co, 2)/pow(crack.a[1],2);
+			equation = pow((x*co + y*si)/crack.a[0], 2)+ \
+						pow((x*si - y*co)/crack.a[1], 2);
 
 			equation -= 1.0;
 
 			if(equation<=0.0){
-				within_circle.push_back(i);
+				nodes_to_remove.push_back(i);
 			}
 		}
 	}
 
-	for(int i= 0; i < n_nodes; i++){
-		if(contains(within_circle, i)){
-			nodes_to_remove.push_back(i);
-		}
-	}
+	// for(int i= 0; i < n_nodes; i++){
+	// 	if(contains(within_circle, i)){
+	// 		nodes_to_remove.push_back(i);
+	// 	}
+	// }
 
 	for(int i = 0; i<n_elems; i++){
 		node1 = edges[2*i];
@@ -494,8 +578,9 @@ void Network::apply_crack(Cracklist & alist) {
 void Network::plotNetwork(int iter_step, bool first_time){
 	ofstream f;
 	Gnuplot gnu;
+	string fname = "data" + std::string(FLDR_STRING) + ".txt";
 	float c;
-	f.open("data.txt",std::ofstream::out | std::ofstream::trunc);
+	f.open(fname,std::ofstream::out | std::ofstream::trunc);
 	// std::default_random_engine seed;
 	// std::uniform_real_distribution<float> arbitcolor(0.0,1.0);
 	int node1, node2;
@@ -581,9 +666,18 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	f.close();
 	}
 	//Plot to h
+	float aspect_ratio = (MAXBOUND_X)/(R[tsideNodes[0]*DIM+1]); 
+
 	stringstream convert;
-	convert<<"[-100:"<<MAXBOUND+100<<"]";
+	convert<<"[-100:"<<MAXBOUND_X+100<<"]";
 	string xrange = convert.str();
+	convert.str(std::string());
+	
+	int x_res = 1280;
+	convert<<x_res<<", "<<int(x_res/aspect_ratio);
+	string png_size = convert.str();
+	convert.str(std::string());
+
 	string bs = "/";
 	string path = FLDR_STRING + bs + std::to_string(iter_step) + ".png";
 
@@ -593,9 +687,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 	gnu.cmd("set colorbox default vertical");
 	gnu.cmd("set cbrange [0:1]");
 	gnu.cmd("set cbtics ('0.0' 0.0,'1.0' 1.0) offset 0,0.5 scale 0");
-	gnu.cmd("plot 'data.txt' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
+	gnu.cmd("set size ratio -1"); // to have the same scale on x and y axes
+	gnu.cmd("plot '" + fname + "' every ::0::1 u 1:2:3 w l lc palette lw 2 title '"+\
 		std::to_string(iter_step)+"'");
-	gnu.cmd("set term png size 1200,900");
+	gnu.cmd("set term png size " + png_size);
 	gnu.cmd("set output '"+ path + "'");
 	gnu.cmd("replot");
 	gnu.cmd("set term x11");
@@ -641,7 +736,7 @@ bool Network::get_stats(){
 	int c = 0;
 
 	if(n_elems <= 0){
-		cout<<"Oops! Something's wrong! n_elems is not correct"<<endl;
+		cout<<"Oops! Something's wrong! n_elems is not positive!"<<endl;
 	}
 	for (j = 0; j < n_elems; j++){
 		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
@@ -652,6 +747,7 @@ bool Network::get_stats(){
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
+		
 		c++;
 
 
@@ -696,6 +792,11 @@ bool Network::get_stats(){
 			}
 		}
 	}
+	if(c<=0){
+		cout<<"No load bearing edges remain! Stopping simulation!\n";
+		return true;
+	}
+
 	mean_x /= c;
 	var_x /= c;
 	var_x -= mean_x*mean_x;
@@ -713,10 +814,7 @@ bool Network::get_stats(){
 	cout<<"node-node x/L std_dev: "<<sqrt(var_t)<<endl;	
 	cout<<"node-node x/L max: "<<max_t<<endl;
 
-	// if(shortage/get_weight() > 0.1){
-	// 	cout<<"Disorder too high for given mesh! Exiting...\n";
-	// 	return true;
-	// }
+
 	if((float)c/(float)n_elems < 0.02){
 		cout<<"Too few edges remain in given mesh! Exiting...\n";
 		return true;
@@ -867,7 +965,7 @@ void Network::dump(int iter, bool first_time){
 		logger<<"Simulation time : "<<SIM_TIME<<"\n";
 		logger<<"Simulation time-step : "<<TIME_STEP<<"\n";
 		logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
-		logger<<"MAXBOUND : "<<MAXBOUND<<"\n";
+		logger<<"MAXBOUND : "<<MAXBOUND_X<<"\t"<<MAXBOUND_Y<<"\n";
 
 		logger<<"Disorder characteristics : "<<"\n";
 		logger<<" -- L_MEAN : "<<L_MEAN<<"\n";

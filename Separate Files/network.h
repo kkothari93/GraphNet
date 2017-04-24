@@ -28,7 +28,7 @@ edges (polymers, E)).
 #include "crack.h"
 using namespace std;
 
-const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
+const float PBC_vector[DIM] = {MAXBOUND_X*1.1, 0};
 const float vel[DIM] = {vel_x, vel_y};
 
 class Network {
@@ -50,6 +50,8 @@ public:
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	virtual void build_network();
+	void side_nodes();
+	void remove_duplicates(int&);
 	void apply_crack(Cracklist &);
 	virtual void load_network(string&);
 	virtual void malloc_network(string&);

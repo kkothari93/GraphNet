@@ -2,6 +2,7 @@
 #define CRACK_H
 
 #include <stddef.h>
+#include "params.h"
 
 using namespace std;
 
@@ -37,7 +38,7 @@ public:
 	int n_cracks; ///< Number of cracks in the Cracklist
 	Crack* listofCracks;
 	Crack & operator[](int);
-	Cracklist(int, float);
+	Cracklist(int);
 	Cracklist();
 	Cracklist(Crack&);
 	~Cracklist();

@@ -29,22 +29,6 @@ using namespace std;
 #include "vel.h"
 #include "helper_funcs.h"
 
-// ----------------------------------------------------------------------- 
-/// \brief Gives the edge nodes for a network.
-///
-// -----------------------------------------------------------------------
-void side_nodes(float* R,\
-	int* lnodes, int* rnodes, int* tnodes, int* bnodes,\
-	int& n_lside, int& n_rside, int& n_tside, int& n_bside, int n){
-	// make the list of side nodes
-	for(int i=0; i<n; i++){
-		if(fabs(R[i*DIM]-0.0)<TOL){lnodes[n_lside]=i; n_lside++;}
-		if(fabs(R[i*DIM]-MAXBOUND)<TOL){rnodes[n_rside]=i; n_rside++;}
-		if(fabs(R[i*DIM + 1]-0.0)<TOL){bnodes[n_bside]=i; n_bside++;}
-		if(fabs(R[i*DIM + 1]-MAXBOUND)<TOL){tnodes[n_tside]=i; n_tside++;}
-	}
-	//cout << __LINE__ << endl;
-}
 
 // ----------------------------------------------------------------------- 
 /// \brief Converts mesh elements from GMSH file to edges and nodes. Only 
@@ -319,10 +303,11 @@ int filename(const string& fname){
 	}
 	else{
 		while(f.good()){
+			c++;
 			f.close(); //Dissociate stream from file
 			temp = fname + "_" + std::to_string(c) + ".txt"; // Overwrite temp
+			cout<<temp<<endl;
 			f.open(temp);
-			c++;
 		}
 		return c;
 	}

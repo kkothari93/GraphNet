@@ -9,7 +9,8 @@ The authors have tried to provide modules for users to build
 their own custom networks and design experiments with them.
 The authors do not claim any responsibility for correctness or
 accuracy of this code and welcome the community to critique and
-improve the code as they wish.
+improve the code as they wish. This code was written under advisors 
+Yuhang Hu and Ahmed Elbanna at University of Illinois at Urbana-Champaign.
 @date Thursday April 13, 2017
 */
 
@@ -64,29 +65,31 @@ int main(int argc, char* argv[]) {
 	if(CRACKED){
 		// Specific crack
 		Crack a;
-		a.setter(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/6.0, MAXBOUND/10.0, 0.0, 1.0);
+		a.setter(MAXBOUND_X, MAXBOUND_Y/2.0, MAXBOUND_X/10.0, MAXBOUND_Y/10.0, 0.0, 1.0);
 
 		Cracklist definite_cracks(a);
 		test_network.apply_crack(definite_cracks);
+		cout<<__LINE__<<endl;
 
 		// Random cracks
-		// Cracklist random_cracks(4, MAXBOUND);
+		// Cracklist random_cracks(4);
 		// test_network.apply_crack(random_cracks);
 	}
 
 	//*argv[2] if is working now. Do not change
 	if (*argv[2]!='1') {
-		for(int i=0; i<test_network.n_elems; i++){
-			cout<<test_network.edges[2*i]<<", "<<test_network.edges[2*i+1]<<endl;
-		}
-		return 0;
 		cout<<"Running serial version of the code: \n";
 		
-		float weight_goal = 2.30401e6; // weight of similarly sized triangular mesh network
-	
+
+		// Weight goal: (Because bashing humans over their weight is not enough!)
+		float weight_goal = 1.0e6; // weight of similarly sized triangular mesh network
 		float weight_multiplier;
 		float weight = test_network.get_weight();
-		if (weight<weight_goal){weight_multiplier = test_network.set_weight(weight_goal);}
+		if (weight<weight_goal){
+			weight_multiplier = test_network.set_weight(weight_goal);
+		}
+
+
 		bool should_stop = test_network.get_stats();
 		int old_n_edges = test_network.get_current_edges();
 		int curr_n_edges = old_n_edges;
@@ -95,21 +98,26 @@ int main(int argc, char* argv[]) {
 		if(should_stop){cout<<"Simulation needs to stop!\n";return 0;}
 		float* plate_forces;
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
-		memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
+		memset(plate_forces, 0.0, STEPS*DIM*sizeof(float));
 
 		test_network.plotNetwork(0, true);
 
+		// 
 		test_network.dump(0, true);
 
+		// For time is endless but your time...not so much!  
 		clock_t t = clock();
+		float old_time_per_iter;
+		float new_time_per_iter = 100.0f;
 		cout<<"\n Will run for "<<STEPS<<":\n";
 		
 		for(int i = 0; i<STEPS; i++ ){
-			
+			// The three lines that do all the work
 			test_network.optimize();
 			test_network.move_top_plate();
 			test_network.get_plate_forces(plate_forces, i);
 			
+			// But add more lines, just to show-off.
 			if((i+1)%100 == 0){
 				should_stop = test_network.get_stats();
 				curr_n_edges = test_network.get_current_edges();
@@ -117,12 +125,28 @@ int main(int argc, char* argv[]) {
 					test_network.plotNetwork(i, false);
 					test_network.dump(i);
 				}
-				if(should_stop){break;}
+				if(should_stop){
+					break;
+				}
+
+
+				new_time_per_iter = float(clock()-t)/CLOCKS_PER_SEC;
+				if(i==0){
+					old_time_per_iter = new_time_per_iter;
+				}
+
+				if(new_time_per_iter < 0.1*old_time_per_iter){
+					cout<<"Seems like very few edges remain! \n";
+					break;
+				}
+				
 				cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 			}
 
 		}
+
+		// For names allow unique identification. Well, almost! 
 		string sb = SACBONDS ? "true" : "false" ; 
 		string fname = FLDR_STRING + std::to_string(L_STD/L_MEAN) + "_" + sb + ".txt";
 		write_to_file<float>(fname, plate_forces, STEPS, DIM);
@@ -130,6 +154,8 @@ int main(int argc, char* argv[]) {
 		free(plate_forces);
 	}
 	else {
+
+		// Settle in! This code is murky af
 		cout<<"Running MPI version of the code: "<<endl;
 		MPI_Init(NULL, NULL);
 		
@@ -140,7 +166,6 @@ int main(int argc, char* argv[]) {
 	  	int world_rank;
 	  	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	  	
 	  	MPI_Network * main_network = new MPI_Network(test_network);
 		
 	  	float* plate_forces = NULL;
@@ -219,7 +244,7 @@ int main(int argc, char* argv[]) {
 		clock_t t = clock(); 
 		for(iter = 0; iter<STEPS; iter++){
 			if((iter+1)%100 == 0){ 
-				cout<<(iter+1)<<endl; 
+				//cout<<(iter+1)<<endl; 
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 				if(world_rank==0){
@@ -264,7 +289,7 @@ int main(int argc, char* argv[]) {
 					main_network->get_plate_forces(plate_forces, iter);
 				}
 				main_network->move_top_plate();
-				cout<<iter<<endl;
+				//cout<<iter<<endl;
 			}
 
 			MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);

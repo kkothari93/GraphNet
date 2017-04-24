@@ -146,10 +146,10 @@ void MPI_Network::rewrite_moving_nodes(){
 void MPI_Network::init_MPI(int world_rank, int world_size) {
 
 	int y_level = world_rank % 2 == 0? world_rank/2 : (world_rank-1)/2;
-	float x_lo = world_rank%2 == 0? 0 : (PAD/2);
-	float x_hi = world_rank%2 == 0? PAD/2 : PAD;
-	float y_lo = ((PAD*2.0/world_size) * y_level);
-	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD : ((PAD*2.0/world_size) * (y_level+1));
+	float x_lo = world_rank%2 == 0? 0 : (PAD_X/2);
+	float x_hi = world_rank%2 == 0? PAD_X/2 : PAD_X;
+	float y_lo = ((PAD_Y*2.0/world_size) * y_level);
+	float y_hi = (world_rank == world_size - 1) || (world_rank == world_size - 2)? PAD_Y : ((PAD_Y*2.0/world_size) * (y_level+1));
 	
 	
 	cout<<n_nodes<<endl;
@@ -257,16 +257,15 @@ void MPI_Network::get_forces(bool update_damage = false) {
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
 		else{
 			s = dist(r1, r2);
 			unitvector(rhat, r1, r2);
 			force = force_wlc(s, L[j]);
-			if(force == 999999){edges[j*2] = -1; edges[j*2 +1] = -1; force =0.0; damage[j] = 0.0;}
 			convert_to_vector(edge_force, force, rhat);
 		}
+		
 		#pragma unroll
 		for (k = 0; k < DIM; k++){
 			forces[node1*DIM + k] -= edge_force[k];
