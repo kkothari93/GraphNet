@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		cout << world_rank << " " << __LINE__ << " iter: " << iter << endl;
-		main_network->plotNetwork(iter, false);
+		//main_network->plotNetwork(iter, false);
 		main_network->optimize();
 		MPI_Barrier(MPI_COMM_WORLD);
 		//cout <<  world_rank<< "  " <<__LINE__ << endl;
