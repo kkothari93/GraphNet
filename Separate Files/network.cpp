@@ -180,7 +180,7 @@ void Network::side_nodes(){
 
 // ----------------------------------------------------------------------- 
 /// \brief Removes duplicate edges. A much more efficient version can be made
-/// of this program. But it is called only once in the simulation, so one 
+/// of this program. But it is called only once in the simulation, so this 
 /// should be fine.
 // -----------------------------------------------------------------------
 void Network::remove_duplicates(int& n_elems){
@@ -259,6 +259,7 @@ void Network::load_network(string& fname) {
 
 	cout<<"Reading the mesh...\n";
 	take_input(R, edges, n_nodes, n_elems, fname);
+
 	// remove duplicate edges
 	remove_duplicates(n_elems);
 
@@ -266,7 +267,6 @@ void Network::load_network(string& fname) {
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
-
 
 
 	// initialize boundary node arrays

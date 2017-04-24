@@ -244,7 +244,6 @@ int main(int argc, char* argv[]) {
 		clock_t t = clock(); 
 		for(iter = 0; iter<STEPS; iter++){
 			if((iter+1)%100 == 0){ 
-				//cout<<(iter+1)<<endl; 
 				cout<<"That took "<<(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 				if(world_rank==0){
@@ -257,7 +256,6 @@ int main(int argc, char* argv[]) {
 
 
 			MPI_Gather(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, R_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
-			//MPI_Barrier(MPI_COMM_WORLD);
 
 			if((iter+1)%NSYNC == 0){
 				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
@@ -265,7 +263,6 @@ int main(int argc, char* argv[]) {
 
 			// syncing R and forces
 			if (world_rank == 0) {
-				cout<<iter<<endl;
 				int node_to_sync  = 0;
 				for (int i = 0; i < world_size; i += 1) {
 					for (int j = i*main_network->chunk_nodes_len; j < (i+1)*main_network->chunk_nodes_len; j++) {
@@ -289,7 +286,6 @@ int main(int argc, char* argv[]) {
 					main_network->get_plate_forces(plate_forces, iter);
 				}
 				main_network->move_top_plate();
-				//cout<<iter<<endl;
 			}
 
 			MPI_Bcast(main_network->R, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);

@@ -155,11 +155,11 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	cout<<n_nodes<<endl;
 	chunk_nodes_len = int(n_nodes/world_size*1.3);
 	chunk_nodes = new int[chunk_nodes_len];
-	// initialization can be inside for k, increments need to be inside if loop
+	
+	// initialization can be inside for loop for k, increments need to be inside if loop
 	for (int i = 0,k=0; i < n_nodes; i+=1) {
 		if (Rinset(&(R[i*DIM]),x_lo, x_hi, y_lo, y_hi)) {
 			chunk_nodes[k] = i;
-			// printf("Adding node %d to proc %d\n",i, world_rank);
 			k++;
 		}
 	}
@@ -170,9 +170,6 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 	for (int i = 0, k=0; i < n_elems; i+=1) {
 		node1 = edges[i*2];
 		node2 = edges[i*2 + 1];
-		// if(world_rank==0){
-		// 	cout<<node1<<", "<<node2<<endl;
-		// }
 
 		// check this condition for both nodes, use Rinset
 		if(node1 != -1 && node2 != -1){
@@ -181,15 +178,9 @@ void MPI_Network::init_MPI(int world_rank, int world_size) {
 			if (!node1inset && !node2inset) {
 				continue;
 			}
-			// else if(node1inset && !node2inset){
-			// 	cout<<"Edge "<<node1<<", "<<node2<<" with "<<node1<<" in "<<world_rank<<" chunk"<<endl;
-			// }
-			// else if(!node1inset && node2inset){
-			// 	cout<<"Edge "<<node1<<", "<<node2<<" with "<<node2<<" in "<<world_rank<<" chunk"<<endl;
-			// }
 			else {
 				chunk_edges[k] = i;
-				// cout<<world_rank<<" has edge "<<i<<"\n";
+	
 				k++;
 			}
 		}
@@ -265,7 +256,7 @@ void MPI_Network::get_forces(bool update_damage = false) {
 			force = force_wlc(s, L[j]);
 			convert_to_vector(edge_force, force, rhat);
 		}
-		
+
 		#pragma unroll
 		for (k = 0; k < DIM; k++){
 			forces[node1*DIM + k] -= edge_force[k];
