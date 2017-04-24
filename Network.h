@@ -24,11 +24,17 @@ using namespace std;
 #define __params__	
 #define DIM 2								// Number of dimensions
 #define TIME_STEP 1e-4						// Time step
-#define SIM_TIME 5.0						// Simulation time
+#define SIM_TIME 8.0						// Simulation time
 #define TOL 1e-6							// Tolerance
+<<<<<<< HEAD
 #define STEPS 1000 //int(SIM_TIME/TIME_STEP)		// Number of time steps
 #define L_MEAN 120.0f						// Average for contour length
 #define L_STD 4.0f							// Std. deviation for contour lengths
+=======
+#define STEPS int(SIM_TIME/TIME_STEP)		// Number of time steps
+#define L_MEAN 120.0f						// Average for contour length
+#define L_STD 6.0f							// Std. deviation for contour lengths
+>>>>>>> BW
 #define Z_MAX 10							// Max coordination number
 #define MAXBOUND 500.0f
 #define CRACKED false
@@ -45,40 +51,8 @@ using namespace std;
 
 using namespace std;
 
-const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
+const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
 const float vel[DIM] = {vel_x, vel_y};
-
-template <typename t>
-void write_to_file(string& fname, t* arr, int rows, int cols){
-
-	ofstream logger;
-	std::time_t result = std::time(nullptr);
-
-
-	cout<<"1D pulling of a 2D gel"<<endl;
-	cout<<"File created at "<<std::asctime(std::localtime(&result));
-	cout<<endl;
-
-	cout<<"Sim dimension : "<<DIM<<endl;
-	cout<<"Simulation time : "<<SIM_TIME<<endl;
-	cout<<"Velocity : "<<vel_x<<"\t"<<vel_y<<endl;
-	cout<<endl;
-
-	cout<<"Disorder characteristics : "<<endl;
-	cout<<" -- L_MEAN : "<<L_MEAN<<endl;
-	cout<<" -- L_STD : "<<L_STD<<endl;
-	cout<<endl;
-	
-	cout<<"Cracked? : "<<CRACKED<<endl;
-
-	logger.open(fname, ios::trunc|ios_base::out);
-	for(int i =0; i < rows; i++){
-		for(int j = 0; j< cols; j++){
-			logger<<arr[i*cols + j]<<"\t";
-		}
-		logger<<"\n";
-	}
-}
 
 class Network {
 
@@ -93,6 +67,7 @@ public:
 	void load_network(string&);
 	void malloc_network(string&);
 	void make_edge_connections(float dely_allowed = 10.0);
+<<<<<<< HEAD
 	//bool get_forces(bool, int lo = 0, int hi = 0);
 	void get_forces(bool);
 	void move_top_plate();
@@ -106,8 +81,19 @@ public:
 	void set_weight(float weight);
 	void plotNetwork(int iter_step, bool first_time);
 	bool notmoving(int);
+=======
+	void get_forces(bool);
+	void move_top_plate();
+	void get_plate_forces(float*, int);
+	void optimize(float, float, int);
+	float get_weight();
+	void set_weight(float);
+	bool get_stats();
+	int get_current_edges();
+	void split_for_MPI(float * R_split, int * edges_split, float * forces, int number_of_procs, int curr_proc_rank);
+>>>>>>> BW
 
-//private:
+private:
 
 	void clear();
 	void copy(Network const & source);

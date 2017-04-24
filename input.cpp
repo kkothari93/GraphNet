@@ -10,15 +10,20 @@ using namespace std;
 
 inline int get_num_vertices(int elem_type){
 	switch(elem_type){
-		//case 1: return 2;
+		case 1: return 2;
 		case 2: return 3;
-		//case 3: return 4;
-		//case 4: return 4;
-		//case 5: return 8;
-		//case 7: return 5;
+		case 3: return 4;
+		case 4: return 4;
+		case 5: return 8;
+		case 7: return 5;
 		default: return -1;
 	}
 
+}
+
+inline bool does_file_exist(string& fname){
+	ifstream infile(fname);
+	return infile.good();
 }
 
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges){
@@ -44,31 +49,81 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 	delete[] local_nodes;
 }
 
-void take_input(float* R, int* edges, 
-		int& num_nodes, int& num_elems){
+void mapping(int& edge_counter, int elem_type){
+	switch(elem_type){
+		case 2:
+			edge_counter += 3;
+		//TODO: add other mappings
+	}
+
+}
+
+void read_n(int& n_nodes, int& n_elems, string& fname){
+
+	string line;
+	ifstream source;
+	stringstream in_pos;
+	source.open(fname);
+	bool read_num_nodes = false, read_n_elems = false;
+	
+	n_nodes = 0;
+	n_elems = 0;
+	do{
+		getline(source, line);
+		if(line.find("$Nodes") != string::npos){
+			getline(source, line);
+			n_nodes = stoi(line);
+			cout<<"The number of nodes are "<<n_nodes<<endl;
+			read_num_nodes = true;
+		}
+	}while(!read_num_nodes);
+	do{
+		getline(source, line);
+		if(line.find("$Elements") != string::npos){
+			int id, elem_type;
+			int num_vertices, num_lines;
+			getline(source, line);
+			num_lines = stoi(line);
+			int c = 0;
+			for(int i=0; i<num_lines; i++){
+				getline(source, line);
+				//cout<<line<<endl;
+				in_pos<<line;
+				in_pos>>id;
+				in_pos>>elem_type;
+				//cout<<"element type is "<<elem_type<<endl;
+				num_vertices = get_num_vertices(elem_type);
+				if(num_vertices>0){
+					mapping(n_elems, elem_type);
+				}
+				in_pos.str(std::string());
+				in_pos.clear();
+			}
+			read_n_elems = true;
+			}
+			//TODO: get elements
+	}while(!read_n_elems);
+	source.close();
+}
+
+void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 	
 	string line;
 	ifstream source;
 	stringstream in_pos;
-	source.open("/home/kkothar3/2d-sacrificial-bonds-polymers/GMSH templates/template2d.msh");
+	source.open(fname);
 
-
-	bool can_i_read_nodes= false,can_i_read_elems = false;
-	bool read_num_nodes = false, read_num_elems = false;
+	bool read_num_nodes = false, read_n_elems = false;
 
 	do{
 		getline(source, line);
-		//cout<<line<<"\n";
-		//cout<<read_num_elems;
-		if(line=="$Nodes"){
+		if(line.find("$Nodes") != string::npos){
 			getline(source, line);
-			num_nodes=stoi(line);
-			//cout<<"Number of nodes in the function "<<num_nodes<<"\n";
 			float r[3]; int id;
-			for(int i=0; i<num_nodes; i++){
+			for(int i=0; i<n_nodes; i++){
 				getline(source, line);
 				in_pos<<line;
-				//cout<<in_pos.str()<<endl;
+
 				in_pos>>id>>r[0]>>r[1]>>r[2];
 				for(int d=0; d<DIM; d++){
 					R[(id-1)*DIM + d] = r[d];
@@ -80,17 +135,11 @@ void take_input(float* R, int* edges,
 		}
 
 	}while(!read_num_nodes);
-	// for(int i=0; i<num_nodes; i++){
-	// 	cout<<endl;
-	// 	for(int d =0; d<DIM; d++){
-	// 		cout<<R[i*DIM + d]<<"\t";
-	// 	}
-	// }
 
 	do{
 		getline(source, line);
 		//cout<<line<<"\n";
-		if(line=="$Elements"){
+		if(line.find("$Elements") != string::npos){
 			int id, elem_type;
 			int num_vertices, num_lines;
 			getline(source, line);
@@ -110,10 +159,17 @@ void take_input(float* R, int* edges,
 				in_pos.str(std::string());
 				in_pos.clear();
 			}
-			read_num_elems = true;
-			num_elems = c;
+			read_n_elems = true;
+			if(c==n_elems){
+				cout<<"Everything's alright here!\n";
+			}
+			else{
+				cout<<"Damn! Something's not right here...\n";
+				cout<<"Read "<<n_elems;
+				cout<<", Got "<<c<<endl;
+			}
 			}
 			//TODO: get elements
-	}while(!read_num_elems);
+	}while(!read_n_elems);
 	source.close();
 }

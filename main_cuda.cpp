@@ -6,6 +6,7 @@
 #include <cmath>
 #include <time.h>
 #include <vector>
+#include <cstring>
 #include <algorithm>
 #include <ctime>
 #include <chrono>
@@ -36,90 +37,14 @@
 #define T 300 								// Temperature
 #define ae 0.1 								// Strength of bond - includes activation energy
 #define delxe 0.15 							// parameter for breaking crosslink connection
-#define BLOCK_SIZE 1024
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include "cudakernels.h"
 
 static float vel[2] = {vel_x, vel_y};
-
-inline float getnorm(const float* vec, const int dim = DIM){
-	float s = 0;
-	for (int j = 0; j<DIM; j++){
-		s += pow(vec[j], 2);
-	}
-	return sqrt(s);
-}
-
-inline void convert_to_vector(float* result, const float mag, const float* direction){
-	for (int i = 0; i<DIM; i++){
-		result[i] = mag*direction[i];
-	}
-}
-
-inline void normalize_vector(float* result, const float* vec){
-	float norm = getnorm(vec);
-	for (int i = 0; i<DIM; i++){
-		result[i] = vec[i] / norm;
-	}
-}
-
-inline void normalize_vector(float* vec){
-	float norm = getnorm(vec);
-	for (int i = 0; i<DIM; i++){
-		vec[i] = vec[i] / norm;
-	}
-}
-
-inline float dist(const float* r1, const float* r2){
-	float s = 0.0;
-	for (int j = 0; j<DIM; j++){
-		s += pow(r1[j] - r2[j], 2.0);
-	}
-	return sqrt(s);
-}
-
-inline void unitvector(float* result, float* r1, float* r2){
-	for (int j = 0; j<DIM; j++){
-		result[j] = r1[j] - r2[j];
-	}
-	normalize_vector(result);
-}
-
-inline float force_wlc(float x, float L){
-	float t = x / L;
-	if (t < 0.99){ return kB*T / b * (t + 1.0 / 4.0 / pow((1 - t), 2) - 1.0 / 4.0); }
-	else { return 999999.0; }
-}
-
-inline float kfe(float force_mag){
-	return ae * exp(force_mag * delxe / kB / T);
-}
-
-void forcevector(float* result, float* r1, float* r2, float L){
-	float rhat[DIM];
-	float s = dist(r1, r2);
-	unitvector(rhat, r1, r2);
-	float force = force_wlc(s, L);
-	convert_to_vector(result, force, rhat);
-}
-
-float psi_wlc(float stretch, float L){
-	return 3.0 / 4.0*kB*T / b*L*pow(L, 2)*(1.0 + 1.0 / 3.0 * stretch / (1 - stretch));
-}
-
-void delpsi_wlc_delrvec(float* result, float* r1, float* r2, float L){
-	float stretch_vector[DIM];
-	for (int i = 0; i < DIM; i++){
-		stretch_vector[i] = (r1[i] - r2[i]) / L;
-	}
-	float stretch = getnorm(stretch_vector);
-	float delpsi_delr_mag = 3.0*(1.0 + stretch / (1.0 - stretch) / 3.0) + stretch / 2.0 * pow(1.0 / (1.0 - stretch), 2);
-	float normed_stretch_vector[DIM];
-	normalize_vector(normed_stretch_vector, stretch_vector);
-	convert_to_vector(result, delpsi_delr_mag, normed_stretch_vector);
-}
+// Make PBC connections
+const float PBC_vector[DIM] = {MAXBOUND*1.1, 0};
 
 template <typename t>
 void print_array(t* arr, int n, int dim){
@@ -132,6 +57,7 @@ void print_array(t* arr, int n, int dim){
 	}
 }
 
+<<<<<<< HEAD
 void get_pull_forces(float* , float* , int , const int* , int);
 
 void get_forces(float* forces, float* R, int* edges, float* damage,\
@@ -294,6 +220,8 @@ void inline force_on_plate(float* plate_force, float* forces,\
 		}
 	}
 }
+=======
+>>>>>>> BW
 
 void __init__(float* L, float* damage, bool* PBC, int num_elems){
 	std::default_random_engine seed;
@@ -344,11 +272,7 @@ void side_nodes(float* R,\
 	}
 }
 
-void move_top_nodes(float* R, int* tnodes, int n_tnodes){
-	for(int i=0; i < n_tnodes; i++){
-		R[tnodes[i]*DIM + 1] += vel[1] * TIME_STEP;
-	}
-}
+
 
 
 void get_file(const string& filename, float* arr, \
@@ -380,6 +304,7 @@ void get_file(const string& filename, float* arr, \
 		}
 		fout<<endl;
 	}
+	cout<<"Written to file!\n"<<filename<<"\n";
 	fout.close();
 }
 
@@ -440,23 +365,6 @@ void plot_forces(Gnuplot& h, \
 }
 
 
-void get_pull_forces(float* forces, float* plate_force,\
- int iter_step, const int* tside, int tnodes){
-	// Zero the forces first
-	plate_force[2*iter_step] = 0.0;
-	plate_force[2*iter_step + 1] = 0.0;
-	for(int i=0; i<tnodes; i++){
-		plate_force[2*iter_step] += forces[2*tside[i]];
-		plate_force[2*iter_step+1] += forces[2*tside[i]+1]; 
-	}
-}
-
-void get_components(vector<float>& vec_x , vector<float>& vec_y,\
-	 float* arr, int index){
-	vec_x.push_back(-arr[2*index]);
-	vec_y.push_back(-arr[2*index+1]);
-}
-
 inline bool contains(vector<int>& vec, int elem){
 	return (std::find(vec.begin(), vec.end(), elem) != vec.end());
 }
@@ -491,60 +399,113 @@ void crack(float* c, float* a, float* R, int n_nodes,
 	cout<<"Edges removed : "<<edges_removed<<endl;
 }
 
-char gen_random(char* s, const int len){
-	static const char alpha[]="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-	for(int i = 6; i<len+6; i++){
-		s[i] = alpha[rand()%(sizeof(alpha)-1)];
+void get_moving_nodes(int* moving_nodes, int& n_moving, \
+	int* tnodes, int n_tside, int* bnodes, int n_bside,\
+	int n_nodes){
+	int c = 0, nt,nb;
+	bool found = false;
+	for(int i=0; i<n_nodes; i++){
+		found =false;
+		for(nt= 0; nt< n_tside; nt++){
+			if(tnodes[nt]==i){
+				found=true; 
+				break;
+			}
+		}
+		for(nb= 0; nb< n_bside; nb++){
+			if(bnodes[nb]==i){
+				found=true;
+				break;
+			}
+		}
+		if(!found){
+			moving_nodes[c] = i;
+			c++;
+		}
 	}
-	s[len] = 0;
+	cout<<"We have "<<c<<" moving nodes!\n";
+
 }
-
 int main(){
-	int n_nodes=1600, n_elems = 11000;
 
-	// Initialize nodes and edges
-	float* R = (float*)malloc(n_nodes*DIM*sizeof(float));
-	float* forces = (float*)malloc(n_nodes*DIM*sizeof(float));
-	int* edges = (int*)malloc(Z_MAX*n_nodes*2*sizeof(int));
-	float* pull_forces = (float*)malloc(STEPS*DIM*sizeof(float));
+	int n_nodes, n_elems;
+	int steps = 10;
 
-	vector<float> p_x;
-	vector<float> p_y;
-	// file to read and write position data
-	const string fname = "coordinates.txt";
+	string fname = "./template2d.msh";
+	//Check if file exists
+	// bool exists = does_file_exist(fname);
+	// if(!exists){
+	// 	cout<<"File does not exist!\n";
+	// 	return 0;
+	// }
+	read_n(n_nodes, n_elems, fname);
+
+	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
+	// add memory for side connections
+	n_elems += 3*max_nodes_on_a_side;
+
+	size_t sf = sizeof(float);
+	size_t si = sizeof(int);
+	size_t sb = sizeof(bool);
+
+	float* R; int* edges;
+	float* forces; float* damage;
+	int* tsideNodes;
+	int* bsideNodes;
+	int* rsideNodes;
+	int* lsideNodes;
+	int* moving_nodes;
+	bool* PBC;
+	float* L; 
+	float* pull_forces;
+
+	R = (float*)malloc(n_nodes*DIM*sf);
+	edges = (int*)malloc(n_elems*2*si);
+	forces = (float*)malloc(n_nodes*DIM*sf);
+	damage = (float*)malloc(n_elems*sf);
+	L = (float* )malloc(n_elems*sf);
+	PBC = (bool* )malloc(n_elems*sb);
+	lsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	rsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	bsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	tsideNodes = (int* )malloc(max_nodes_on_a_side*si);
+	pull_forces = (float* )malloc(steps*DIM*sf);
+
+	std::memset(pull_forces, 0.0, steps*DIM*sf);
+
+	// 	initialise n_xside for side nodes
+	int n_rside = 0;
+	int n_lside = 0;
+	int n_bside = 0;
+	int n_tside = 0;
+
+	// adjust n_elems back to actual
+	n_elems -= 3*max_nodes_on_a_side;
+
 
 	// Read in mesh
 	cout<<"Reading the mesh...\n";	
-	take_input(R, edges, n_nodes, n_elems);
+	take_input(R, edges, n_nodes, n_elems, fname);
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
 	cout<<"Number of elements are: "<<n_elems<<endl;
 
-	int max_nodes_on_a_side = int(sqrt(n_nodes))*2;
-	int n_rside = 0, n_lside = 0, n_bside = 0, n_tside = 0;
-	// get left and right nodes
-	int* lsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
-	int* rsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
-	// get top and bottom nodes
-	int* tsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
-	int* bsideNodes = (int*)malloc(max_nodes_on_a_side*sizeof(float));
-
 	side_nodes(R, lsideNodes, rsideNodes, tsideNodes, bsideNodes,\
-		n_lside, n_rside, n_tside, n_bside, n_nodes);	
+		n_lside, n_rside, n_tside, n_bside, n_nodes);
+
+	// get free (no BC) nodes 
+	int n_moving = n_nodes - n_tside - n_bside;
+	moving_nodes = (int*)malloc(n_moving*sizeof(int));
+	get_moving_nodes(moving_nodes, n_moving, tsideNodes, n_tside,\
+		bsideNodes, n_bside, n_nodes);
+
 
 	// Initialize edge properties
-	float* damage = (float*)malloc(2*n_elems*sizeof(float));
-	float* L = (float*)malloc(2*n_elems*sizeof(float));
-	bool* PBC = (bool*)malloc(2*n_elems*sizeof(bool));
 	__init__(L, damage, PBC, n_elems);
-
-	// Make PBC connections
-	const float PBC_vector[DIM] = {MAXBOUND*1.2, 0};
-	// TODO: get lside and rside nodes
+	
 	make_edge_connections(R, edges, n_elems, \
 		lsideNodes, rsideNodes, n_lside, n_rside, \
-		PBC, L, damage, 15.0);
+		PBC, L, damage, 10.0);
 	cout<<"Number after new connections made: "<<n_elems<<endl;
 
 	if(CRACKED){
@@ -558,11 +519,9 @@ int main(){
 	vars.PBC_vector = PBC_vector;
 	vars.R = R; 
 	vars.edges = edges;
-	vars.forces = forces;
-	vars.bsideNodes = bsideNodes; 
+	vars.forces = forces; 
 	vars.tsideNodes = tsideNodes;
-	vars.lsideNodes = lsideNodes; 
-	vars.rsideNodes = rsideNodes;
+	vars.moving_nodes = moving_nodes;
 	vars.PBC = PBC;
 	vars.L = L; 
 	vars.damage = damage;
@@ -570,106 +529,43 @@ int main(){
 	vars.n_nodes = n_nodes; 
 	vars.n_elems = n_elems;
 	vars.n_tnodes = n_tside; 
-	vars.n_bnodes = n_bside;
-	vars.n_side_nodes = max_nodes_on_a_side;
+	vars.n_moving = n_moving;
+
+	sanity_check(&vars);
+
+
 
 	// gnuplots
-	Gnuplot gforces("lines lw 2");
-	Gnuplot gnetwork;
+	//Gnuplot gforces("lines lw 2");
+	// Gnuplot gnetwork;
 
-	plot_network(gnetwork, R, edges, PBC, \
-				n_nodes, n_elems, 0);
+	// plot_network(gnetwork, R, edges, PBC, \
+	// 			n_nodes, n_elems, 0);
+	// char p;
+	// cin>>p;
 	// Track time for 1000 iterations
 	clock_t t = clock(); 
-	
-	int iter = 0; // needed to write forces later
 
-	if(USE_CUDA){
-		// pull on CUDA
-		pull_CUDA(&vars, STEPS);
-	}
-	else{
-		// pull on host
-		for(iter = 0; iter<STEPS; iter++){
-			if((iter+1)%500 == 0 ){
-				printf("Finished %d iterations...\n",(iter+1));
-				printf("That took %0.5f s\n", float(clock()-t)/CLOCKS_PER_SEC);
-				t = clock();
-			}
 
-			optimize(R, edges, damage, L, n_nodes, n_elems,\
-				PBC, PBC_vector, tsideNodes, n_tside, bsideNodes, n_bside,\
-				pull_forces, iter);
-			
-			get_components(p_x, p_y, pull_forces, iter);
 
-			move_top_nodes(R, tsideNodes, n_tside);
-		}
-	}
-	
+	pull_CUDA(&vars, steps);
+
 	cout<<"Simulation DONE! Storing data...\n";
 
-	char rand_string[] = "forcesxxxxxx.txt";
-	gen_random(rand_string, 6);
+	string filename = "forces.txt";
 	
-	get_file(rand_string, pull_forces, DIM, iter);
+	get_file(filename, pull_forces, DIM, steps);
 
 	// wait to check out the plots	
-	char p;
-	cin>>p;
 
 	// free all variables on CPU
 	free(pull_forces);
 	free(bsideNodes); free(tsideNodes);
 	free(lsideNodes); free(rsideNodes);
+	free(moving_nodes);
 	free(PBC);
 	free(R); free(edges);
 	free(L); free(damage);	
 
 	return 0;
 }
-
-
-	///////////////////////////////////////////////////////////
-	// unit tests for functions
-	///////////////////////////////////////////////////////////
-
-
-	// float r1[] = {0.0,0.0};
-	// float r2[] = {1.0, 1.0};
-	// float result[] = {0.0,0.0};
-	// float ch_l = 45;
-
-	// unitvector(result,r1,r2);
-	// cout<<"Unit vector is : \n";	
-	// print_array<float>(result, 1, DIM);
-	// cout<<"Distance is : "<<dist(r1, r2)<<endl;
-	// forcevector(result, r1, r2 , ch_l);
-	// print_array<float>(result, 1, DIM);
-
-	//print_array<float>(forces, n_nodes, DIM);
-
-	// cout<<"Pair\tchain length\t distance"<<endl;
-	// int node1, node2;
-	// for(int i=0; i<n_elems; i++){
-	// 	node1 = edges[2*i]; node2 = edges[2*i+1];
-	//  	for(int k = 0; k<DIM; k++){
-	//  		r1[k] = R[node1*DIM + k];
-	//  		r2[k] = R[node2*DIM + k];
-	//  	}
-	//  	cout<<"("<<node1<<", "<<node2<<")\n";
-	//  	print_array<float>(r1, 1, DIM);
-	//  	print_array<float>(r2, 1, DIM);
-	//  	unitvector(result, r1, r2);
-	//  	print_array<float>(result, 1, DIM);
-	//  	cout<<"Distance, L, PBC =  "<<dist(r1, r2)<<", "<<L[i]<<", "<<PBC[i]<<endl;
-	//  	cout<<"Force = "<<force_wlc(dist(r1,r2), L[i])<<endl;
-	//  // 	cout<<"("<<node1<<", "<<node2<<")\t"\
-	//  // 	<<forces[i*DIM]<<"\t"<<forces[i*DIM + 1]<<endl;
-	// 	// //cout<<PBC[i]<<" \t";
-	//  // 	cout<<L[i]<<" \t";
-	//  // 	cout<<dist(r1,r2)<<endl;
-	//  	cout<<endl;
-	//  }
-
-// Herbert Hui -- Nature Materials

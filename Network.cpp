@@ -22,7 +22,7 @@ inline int get_num_vertices(int elem_type){
 	switch(elem_type){
 		//case 1: return 2;
 		case 2: return 3;
-		//case 3: return 4;
+		case 3: return 4;
 		//case 4: return 4;
 		//case 5: return 8;
 		//case 7: return 5;
@@ -47,6 +47,7 @@ inline float getnorm(const float* vec, const int dim = DIM){
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges){
 	int* local_nodes = new int[n_vertices];
 	int garbage[3];
+	
 	input>>garbage[0]>>garbage[1]>>garbage[2];
 	for(int n = 0; n<n_vertices; n++){
 		input>>local_nodes[n];
@@ -60,9 +61,21 @@ void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& inp
 		edges[edge_counter*2+3] = local_nodes[2] - 1 ;
 		edges[edge_counter*2+4] = local_nodes[1] - 1 ;
 		edges[edge_counter*2+5] = local_nodes[2] - 1 ;
-		edge_counter += 3; 
+		edge_counter += 3;
+		break;
+		case 3:
+		// [0,1],[0,3],[1,2],[2,3]
+		edges[edge_counter*2] = local_nodes[0] -1 ;
+		edges[edge_counter*2+1] = local_nodes[1] - 1 ;
+		edges[edge_counter*2+2] = local_nodes[0] - 1 ;
+		edges[edge_counter*2+3] = local_nodes[3] - 1 ;
+		edges[edge_counter*2+4] = local_nodes[1] - 1 ;
+		edges[edge_counter*2+5] = local_nodes[2] - 1 ;
+		edges[edge_counter*2+6] = local_nodes[2] - 1 ;
+		edges[edge_counter*2+7] = local_nodes[3] - 1 ;
+		edge_counter += 4;
+		break;	 
 		//TODO: write mapping code
-
 	}
 	delete[] local_nodes;
 	local_nodes = NULL;
@@ -72,6 +85,10 @@ void mapping(int& edge_counter, int elem_type){
 	switch(elem_type){
 		case 2:
 			edge_counter += 3;
+			break;
+		case 3:
+			edge_counter += 4;
+			break;
 		//TODO: add other mappings
 	}
 
@@ -110,6 +127,7 @@ void read_n(int& n_nodes, int& n_elems, string& fname){
 				in_pos>>elem_type;
 				//cout<<"element type is "<<elem_type<<endl;
 				num_vertices = get_num_vertices(elem_type);
+				if (num_vertices > 3){cout<<"Found elem_type 3 at line "<<i+1<<endl;}
 				if(num_vertices>0){
 					mapping(n_elems, elem_type);
 				}
@@ -664,6 +682,10 @@ void Network::get_forces(bool update_damage = false) {
 
 	
 
+<<<<<<< HEAD
+=======
+void Network::get_forces(bool update_damage = false) {
+>>>>>>> BW
 
 	int node1, node2;
 	int j, k, l, id; // loop variables
@@ -691,7 +713,10 @@ void Network::get_forces(bool update_damage = false) {
 		if(node1 == -1 || node2 == -1) {
 			continue;
 		}
+<<<<<<< HEAD
 
+=======
+>>>>>>> BW
 
 		// read the positions
 		#pragma unroll
@@ -738,7 +763,11 @@ void Network::get_forces(bool update_damage = false) {
 			forces[node2*DIM + k] += edge_force[k];
 		}
 		//update damage if needed
+<<<<<<< HEAD
 		if (update_damage) { //&& (node1 < node2)){
+=======
+		if (update_damage){
+>>>>>>> BW
 			damage[j] += kfe(force)*TIME_STEP;
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
@@ -749,6 +778,7 @@ void Network::get_forces(bool update_damage = false) {
 					cout<<r1[d]<<"\t "<<r2[d]<<"\t";
 				}
 				cout<<endl;
+<<<<<<< HEAD
 				edges[j*2] = -1; edges[j*2+1] = -1;
 			}
 
@@ -756,6 +786,12 @@ void Network::get_forces(bool update_damage = false) {
 	}
 	//printf("forces: %f\t%f\n", forces[4], forces[5]);
 	return;
+=======
+			edges[j*2] = -1; edges[j*2+1] = -1;}
+		}
+	}
+
+>>>>>>> BW
 }
 
 void Network::make_edge_connections(float dely_allowed) {
@@ -925,7 +961,15 @@ float Network::get_weight(){
 }
 
 void Network::set_weight(float weight){
-// TODO
+	float curr_weight = get_weight();
+	float alpha = weight/curr_weight;
+	for(int i = 0; i < n_elems; i++){
+		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
+			L[i] *= alpha;
+		}
+	}
+	cout<<"\n Network weight reset to "<<weight<<"\n";
+	cout<<"Average L now is : "<<weight/n_elems<<"\n";
 }
 
 void Network::move_top_plate(){
@@ -947,6 +991,7 @@ float getabsmax(float* arr, size_t sizeofarr){
 	return max_elem;
 }
 
+<<<<<<< HEAD
 bool Network::notmoving(int nodeid){
 	bool init = false;
 	for(int i=0;i<n_not_moving;i++){
@@ -978,12 +1023,35 @@ void Network::optimize(float eta, float alpha, int max_iter){
 						delR = sqrt(1.0/(rms_history[id*DIM + d] + TOL))*eta*g;
 						R[node*DIM + d] += delR;
 					}				
+=======
+void Network::optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800){
+	float* rms_history = new float[n_moving*DIM](); // () allows 0.0 initialization
+	float* delR = new float[n_moving*DIM]();
+	float g;
+	int id, d, node;
+	for(int step = 0; step < max_iter; step++){
+		get_forces(false);
+		if(getabsmax(forces,n_nodes*DIM)>TOL){
+			for(id = 0; id < n_moving; id++){
+				node = moving_nodes[id];
+				#pragma unroll
+				for(d = 0; d<DIM; d++){
+					g = forces[DIM*node+d];
+					rms_history[id*DIM + d] = alpha*rms_history[id] + (1-alpha)*g*g;
+					delR[id*DIM + d] = sqrt(1.0/(rms_history[id] + TOL))*eta*g;
+					R[node*DIM + d] += delR[id*DIM + d];
+				}		
+>>>>>>> BW
 			}
 		}
 		else{
 			break;
 		}
 	}
+<<<<<<< HEAD
+=======
+	get_forces(true);
+>>>>>>> BW
 	delete[] rms_history;
 	rms_history = NULL;
 
@@ -1003,6 +1071,86 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 	}
 }
 
+<<<<<<< HEAD
+=======
+template <typename t>
+void write_to_file(string& fname, t* arr, int rows, int cols){
+
+	ofstream logger;
+	std::time_t result = std::time(nullptr);
+	logger.open(fname, ios::trunc|ios_base::out);
+
+
+	logger<<"1D pulling of a 2D gel"<<"\n";
+	logger<<"File created at "<<std::asctime(std::localtime(&result));
+	logger<<"\n";
+
+	logger<<"Sim dimension : "<<DIM<<"\n";
+	logger<<"Simulation time : "<<SIM_TIME<<"\n";
+	logger<<"Velocity : "<<vel_x<<"\t"<<vel_y<<"\n";
+	logger<<"\n";
+
+	logger<<"Disorder characteristics : "<<"\n";
+	logger<<" -- L_MEAN : "<<L_MEAN<<"\n";
+	logger<<" -- L_STD : "<<L_STD<<"\n";
+	logger<<"\n";
+	
+	logger<<"Cracked? : "<<CRACKED<<"\n";
+
+    // logger.open(fname, ios::trunc|ios_base::out);
+	for(int i =0; i < rows; i++){
+		for(int j = 0; j< cols; j++){
+			logger<<arr[i*cols + j]<<"\t";
+		}
+		logger<<"\n";
+	}
+    logger.close();
+	cout<<"Stored everything in "<<fname<<"!\n";
+}
+
+int main() {
+
+	//string path = "/media/konik/Research/2D sacrificial bonds polymers/cpp11_code_with_cuda/template2d.msh";
+	string path = "./template2d.msh";
+	Network test_network(path);
+	float weight_goal = 1.03754e6; // weight of similarly sized triangular mesh network
+
+	float weight = test_network.get_weight();
+	if (weight<weight_goal){test_network.set_weight(weight_goal);}
+	bool should_stop = test_network.get_stats();
+
+
+	if(should_stop){return 0;}
+	float* plate_forces;
+	plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
+	memset(plate_forces, 0.0, STEPS*DIM*sizeof(*plate_forces));
+
+	if(CRACKED){
+		Crack crack1(MAXBOUND/2.0, MAXBOUND/2.0, MAXBOUND/6.0, MAXBOUND/10.0);
+		test_network.apply_crack(crack1);
+	}
+
+	clock_t t = clock();
+	cout<<"\n Will run for "<<STEPS<<":\n";
+	for(int i = 0; i<STEPS; i++ ){
+		test_network.optimize();
+		test_network.move_top_plate();
+		test_network.get_plate_forces(plate_forces, i);
+		if((i+1)%100 == 0){
+			test_network.get_stats();
+			test_network.get_current_edges();
+			cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
+			t = clock();  // reset clock
+		}
+	}
+
+	string fname = "forces_disorder_" + std::to_string(L_STD/L_MEAN) + ".txt";
+	write_to_file<float>(fname, plate_forces, STEPS, DIM);
+
+	free(plate_forces);
+	return 0;
+}
+>>>>>>> BW
 
 
 
