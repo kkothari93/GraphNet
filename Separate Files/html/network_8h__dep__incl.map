@@ -1,0 +1,8 @@
+<map id="network.h" name="network.h">
+<area shape="rect" id="node2" href="$mpi__network_8h.html" title="Wrapper around the Network and sacNetwork classes to allow for MPI implementation. " alt="" coords="51,155,157,181"/>
+<area shape="rect" id="node5" href="$sac__network_8h.html" title="Extends the network defintion to include hidden length effects as described by Lieou et al..." alt="" coords="141,80,248,107"/>
+<area shape="rect" id="node7" href="$network_8cpp.html" title="This file implements all functions defined in header mpi_network.h. " alt="" coords="272,80,365,107"/>
+<area shape="rect" id="node3" href="$main_8cpp.html" title="This file includes the code to check whether an MPI implementation has been asked by the user and run..." alt="" coords="5,229,80,256"/>
+<area shape="rect" id="node4" href="$mpi__network_8cpp.html" title="mpi_network.cpp" alt="" coords="105,229,226,256"/>
+<area shape="rect" id="node6" href="$sac__network_8cpp.html" title="Implements all functions prototyped in sac_network.h. " alt="" coords="182,155,303,181"/>
+</map>
