@@ -123,6 +123,18 @@ void Crack::copy(Crack const & source) {
 }
 
 // ----------------------------------------------------------------------- 
+/// \brief Checks whether a node lies inside the specified ellipse of not.
+/// A negative implies point lies inside while a positive implies outside
+///
+// -----------------------------------------------------------------------
+float Crack::inside(float* R){
+	float x = R[0] - c[0];
+	float y = R[1] - c[1];
+	return pow((x*trig[1] + y*trig[0])/a[0], 2)+ \
+			pow((x*trig[0] - y*trig[1])/a[1], 2) - 1.0;
+}
+
+// ----------------------------------------------------------------------- 
 /// \brief Prints the data members of Crack object to STDOUT
 ///
 // -----------------------------------------------------------------------

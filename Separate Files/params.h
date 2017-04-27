@@ -14,8 +14,8 @@
 #define PAD_Y MAXBOUND_Y*1.03
 #define SACBONDS false
 #define IMPLEMENT_PBC false
-#define FLDR_STRING "trial"
-#define CRACKED true
+#define FLDR_STRING "y_edges"
+#define CRACKED false
 #define RATE_DAMAGE false
 
 #if CRACKED

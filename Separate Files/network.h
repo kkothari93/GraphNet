@@ -52,6 +52,9 @@ public:
 	virtual void build_network();
 	void side_nodes();
 	void remove_duplicates(int&);
+	// add long range edges in the network
+	void add_long_range_egdes_y(int, float);
+	void add_long_range_egdes_random(int, float);
 	void apply_crack(Cracklist &);
 	virtual void load_network(string&);
 	virtual void malloc_network(string&);
@@ -60,6 +63,8 @@ public:
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
 	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
+
+
 	float get_weight();
 	float set_weight(float);
 	bool get_stats();

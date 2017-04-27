@@ -148,6 +148,7 @@ void Network::malloc_network(string& fname){
 	n_elems -= 3*max_nodes_on_a_side;
 }
 
+
 // ----------------------------------------------------------------------- 
 /// \brief Gives the boundary nodes for a network.
 ///
@@ -177,6 +178,168 @@ void Network::side_nodes(){
 		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
 	}
 }
+
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds y-directional long range edges to the network. Chooses two nodes
+/// uniformly at random from the n_add divisions in x_direction such that the 
+/// distance between them is at least 0.25*L_MEAN and at max L_MEAN
+///
+/// \param n_add number of long range y-connections to add
+/// \param prestrech float between 0.01,0.99 to give initial x/L of these long range bonds
+/// If value is not between (0.01,0.99), 0.25 is assumed 
+///
+// -----------------------------------------------------------------------
+void Network::add_long_range_egdes_y(int n_add, float prestretch){
+	// Add structured edges in y direction. To do so, first create 2*n_add circles
+	// then find a node in the circle radius (chosen here to be L_STD) and add an edge
+	// between these two nodes
+	float* centers = new float[n_add*2*2]; // 2 times n_add circles, each taking 
+										   // two floats to store centers
+	
+	cout<<"Asked to add "<<n_add<<" more edges!\n";
+
+	if(n_add >= n_elems/2){
+		cout<<"You're asking for too many long range bonds,"
+				" can't do it! I will add none and continue..."<<endl;
+	}
+	
+	if(prestretch < 0.01 || prestretch > 0.99){
+		cout<< "Value for prestretch needs to be between 0.01 and 0.99\n";
+		prestretch = 0.25;
+	}
+
+	// fill the centers
+	for(int i = 0 ; i <n_add*2 ; i++){
+		if(i<n_add){
+			centers[2*i] = MAXBOUND_X/2/n_add * (2*i+1);
+			centers[2*i + 1] = MAXBOUND_Y/4;
+		}
+		if(i>=n_add){
+			centers[2*i] = MAXBOUND_X/2/n_add * (2*(i - n_add)+1);
+			centers[2*i + 1] = 3*MAXBOUND_Y/4;	
+		}
+		cout<<centers[2*i]<<"\t"<<centers[2*i+1]<<endl;
+	}
+
+
+	// create circles for these centers
+	Crack* circles = new Crack[2*n_add]();
+	for(int i=0; i<2*n_add; i++){
+		circles[i].setter(centers[2*i], centers[2*i+1], MAXBOUND_Y/10, MAXBOUND_Y/10, 1, 0);
+	}
+
+	// fill one id per circle
+	int* node_per_circle = new int[2*n_add](); // value initialises to zero: ISO C++03 5.3.4[expr.new]/15
+	for(int i = 0; i < 2*n_add; i++){
+		node_per_circle[i] = 0;
+	}
+	
+
+	for(int i = 4; i<n_nodes; i++){
+		for(int k =0; k<2*n_add; k++){
+			if(node_per_circle[k] != 0){
+				continue;
+			}
+			if(circles[k].inside(&R[DIM*i])<=0){
+				node_per_circle[k] = i;
+			}
+		}
+	}
+
+	float s;
+	//Add edges between selected nodes
+	for(int i = 0; i < n_add; i++){
+		cout<<n_elems<<endl;
+		edges[2*n_elems] = node_per_circle[i];
+		edges[2*n_elems + 1] = node_per_circle[i + n_add];
+
+		// Calculate distance
+		s = dist(&R[node_per_circle[i]*DIM], &R[node_per_circle[i + n_add]*DIM]);
+
+		// update the contour lengths according to position
+		L[n_elems] = s/prestretch;
+
+		// update PBC;
+		PBC[n_elems] =  false;
+
+		// update damage
+		damage[n_elems] = 0;
+
+		// increment n_elems
+		n_elems++;
+	}
+
+	delete[] centers;
+	centers = NULL;
+	delete[] node_per_circle;
+	node_per_circle = NULL;
+	delete[] circles;
+	circles = NULL;
+}
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds random long range edges to the network. Chooses two nodes
+/// uniformly at random and adds an edge with x/L = 0.25 (i.e. prestressed)
+///
+// -----------------------------------------------------------------------
+void Network::add_long_range_egdes_random(int n_add, float prestretch){
+	
+	cout<<"Asked to add "<<n_add<<" more edges!\n";
+	int node1, node2;
+	float s = 0;
+
+	if(n_add >= n_elems/2){
+		cout<<"You're asking for too many long range bonds,"
+				" can't do it! I will add none and continue..."<<endl;
+	}
+
+	if(prestretch < 0.01 || prestretch > 0.99){
+		cout<< "Value for prestretch needs to be between 0.01 and 0.99\n";
+		prestretch = 0.25;
+	}
+
+	
+	srand(time(NULL));
+
+	for(int i = 0; i < n_add; i++){
+		while(s<L_MEAN/4 || s>L_MEAN){ 
+			// L_MEAN/4, L_MEAN is arbitrary threshold to keep the edge long range
+
+			// random number between [min; max] 
+			// min = 4 (all corner nodes); max = n_nodes - 1
+			node1 = rand()%(n_nodes - 4) + 4;
+			node2 = rand()%(n_nodes - 4) + 4;
+		
+			s = dist(&R[node1*DIM], &R[node2*DIM]);
+		}
+
+
+		cout<<"Adding edge between "<<node1<<", "<<node2<<endl;
+
+		// add nodes to edges array
+		edges[n_elems*2] = node1;
+		edges[n_elems*2 + 1] = node2;
+
+		// update the contour lengths according to position
+		L[n_elems] = s/prestretch;
+
+		// update PBC;
+		PBC[n_elems] =  false;
+
+		// update damage
+		damage[n_elems] = 0;
+
+		// increment n_elems
+		n_elems++;
+
+		s = 0;
+	}
+
+}
+
 
 // ----------------------------------------------------------------------- 
 /// \brief Removes duplicate edges. A much more efficient version can be made
@@ -263,6 +426,9 @@ void Network::load_network(string& fname) {
 	// remove duplicate edges
 	remove_duplicates(n_elems);
 
+
+	// add long range connections
+	add_long_range_egdes_y(int(log(n_elems)), 0.25);
 
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
@@ -510,7 +676,7 @@ void Network::apply_crack(Cracklist & alist) {
 	cracked = true;
 	std::default_random_engine seed;
 	std::uniform_real_distribution<float> generator(0, 1);
-	float equation = 0;
+	float val = 0;
 	//make clusters
 	//vector<int> within_circle;
 	vector<int> nodes_to_remove;
@@ -523,28 +689,13 @@ void Network::apply_crack(Cracklist & alist) {
 	for(int ci = 0; ci < alist.n_cracks; ci++){
 		crack.setter(alist[ci]);
 		for(int i=0; i<n_nodes; i++){
-			x = R[i*DIM];
-			y = R[i*DIM+1];
-			x -= crack.c[0];
-			y -= crack.c[1];
-			si = crack.trig[0];
-			co = crack.trig[1];
-			equation = pow((x*co + y*si)/crack.a[0], 2)+ \
-						pow((x*si - y*co)/crack.a[1], 2);
-
-			equation -= 1.0;
-
-			if(equation<=0.0){
+			val = crack.inside(&R[i*DIM]);
+			if(val<=0.0){
 				nodes_to_remove.push_back(i);
 			}
 		}
 	}
 
-	// for(int i= 0; i < n_nodes; i++){
-	// 	if(contains(within_circle, i)){
-	// 		nodes_to_remove.push_back(i);
-	// 	}
-	// }
 
 	for(int i = 0; i<n_elems; i++){
 		node1 = edges[2*i];
@@ -594,10 +745,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 			node1 = edges[j * 2]; 
 			node2 = edges[j * 2 + 1];
 			
-			// // check if pair exists
-			// if(node1 == -1 || node2 == -1) {
-			// 	continue;
-			// }
+			// check if pair exists
+			if(node1 == -1 || node2 == -1) {
+				continue;
+			}
 
 			// read the positions
 			#pragma unroll
