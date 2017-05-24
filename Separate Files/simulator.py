@@ -12,8 +12,10 @@ def gen_param_file(pdict, fldr_string):
     params_header += "#define STEPS %s\n" % pdict['STEPS']
     params_header += "#define L_MEAN %s\n" % pdict['L_MEAN']
     params_header += "#define L_STD %s\n" % pdict['L_STD']
-    params_header += "#define MAXBOUND %s\n" % pdict['MAXBOUND']
-    params_header += "#define PAD %s\n" % pdict['PAD']
+    params_header += "#define MAXBOUND_X %s\n" % pdict['MAXBOUND_X']
+    params_header += "#define MAXBOUND_Y %s\n" % pdict['MAXBOUND_Y']
+    params_header += "#define PAD_X %s\n" % pdict['PAD_X']
+    params_header += "#define PAD_Y %s\n" % pdict['PAD_Y']
     params_header += "#define SACBONDS %s\n" % pdict['SACBONDS']
     params_header += "#define IMPLEMENT_PBC %s\n" % pdict['IMPLEMENT_PBC']
     params_header += '#define FLDR_STRING %s\n' % fldr_string

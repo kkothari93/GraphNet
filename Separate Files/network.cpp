@@ -35,10 +35,18 @@ Network::Network(Network const & source) {
 /// \param fname --> takes a filename and instantiates Network object
 ///
 // ----------------------------------------------------------------------- 
-Network::Network(string& fname) {
+Network::Network(string& fname, bool from_dump) {
 
 	initialized = false;
-	load_network(fname);
+	if(from_dump){
+		load_from_dump(fname);
+	}
+
+	else{
+		load_network(fname);
+		iter_offset = 0;
+	}
+
 	initialized = true;
 
 }
@@ -116,12 +124,9 @@ void Network::build_network() {
 /// This is called by the Network constructor if the same is called using
 /// a filepath string. User is discouraged from directly calling this function.
 /// 
-/// \param fname (string) --> string of the .msh filepath
-/// 
+///  
 // -----------------------------------------------------------------------
-void Network::malloc_network(string& fname){
-	
-	read_n(n_nodes, n_elems, fname);
+void Network::malloc_network(){
 
 	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
 	// add memory for side connections
@@ -149,18 +154,141 @@ void Network::malloc_network(string& fname){
 }
 
 
+
+// ----------------------------------------------------------------------- 
+/// \brief This function loads the last network state from a dump file.
+/// This is called by the Network constructor load_from_dump is set to true.
+/// Do not load from dump if network has already broken.
+/// 
+/// \param dname (string) --> dump filename
+/// 
+// -----------------------------------------------------------------------
+void Network::load_from_dump(string& dname){
+	
+	string last_iter = read_dump(n_nodes, n_elems, dname);
+	iter_offset = stoi(last_iter);
+
+	cout<<"Restarting from iter "<<iter_offset<<endl;
+
+
+	malloc_network();
+
+	//read file
+	ifstream dump;
+	string line;
+	dump.open(dname);
+
+	stringstream out;
+	//read R positions
+	while(!dump.eof()){
+		getline(dump, line);
+		if(line==last_iter){
+			break;	
+		}
+	}
+
+	// added to skip over line "START NODE POSITIONS"
+	getline(dump, line);
+
+	// read R positions
+	int index;
+	float x, y;
+	for(int i=0; i<n_nodes; i++){
+		getline(dump, line);
+		out<<line;
+		out>>index;
+		out>>x>>y;
+		out.str(std::string());
+		out.clear();
+		//cout<<index<<", "<<x<<", "<<y<<endl;
+		R[DIM*index] = x;
+		R[DIM*index+ 1] = y;
+	}
+	// --finished reading R
+
+	while(!dump.eof()){
+		getline(dump, line);
+		if(line.find("START ACTIVE EDGES")!=string::npos){
+			break;	
+		}
+	}
+
+
+	// read edges
+	int node1, node2, p;
+	float d, s;
+	for(int i=0; i<n_elems; i++){
+		getline(dump, line);
+		
+		out<<line;
+		out>>index>>node1>>node2>>d>>p;
+		out.str(std::string());
+		out.clear();
+
+		edges[2*i] = node1;
+		edges[2*i + 1] = node2;
+		if(node1 >= 0 && node2 >= 0){	
+			s = dist(&R[node1*DIM], &R[node2*DIM]);
+
+			if(d!=0){
+				L[i] = s/d;
+			}
+			else{
+				cout<<"could not find L for "<<node1<<", "<<node2<<endl;
+				L[i] = L_MEAN; // should not be the case!
+			}
+		}		
+	
+		damage[i] = d;
+
+		PBC[i] = (p==0) ? false : true;
+	}
+	// --finished reading edges
+
+	dump.close();
+
+	//this->plotNetwork(999999, false);
+
+	float max_y = 0;
+
+	for(int i = 0; i<n_nodes; i++){
+		y = R[DIM*i + 1];
+		if(y>max_y){
+			max_y = y;
+		}
+	}
+
+	// side_nodes
+	side_nodes(0.0, max_y);
+
+	// find moving nodes
+	n_moving = n_nodes - n_tside - n_bside;
+	moving_nodes = (int*)malloc(sizeof(int)*n_moving);
+	
+	int c = 0;
+	for(int i =0; i<n_nodes; i++){
+		if(!ismember(i, tsideNodes, n_tside) && !ismember(i, bsideNodes, n_bside)){
+			moving_nodes[c] = i;
+			c++;
+		}
+	}
+	cout<<"We have "<<c<<" moving nodes\n";
+}
+
+
+
 // ----------------------------------------------------------------------- 
 /// \brief Gives the boundary nodes for a network.
 ///
 // -----------------------------------------------------------------------
-void Network::side_nodes(){
+void Network::side_nodes(float max_x, float max_y){
 
 	// make the list of side nodes
 	for(int i=0; i<n_nodes; i++){
 		if(fabs(R[i*DIM]-0.0)<TOL){n_lside++;}
-		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){n_rside++;}
+		if(fabs(R[i*DIM]-max_x)<TOL){n_rside++;}
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){n_bside++;}
-		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){n_tside++;}
+		if(fabs(R[i*DIM + 1]-max_y)<TOL){n_tside++;}
 	}
 
 	size_t si = sizeof(int);
@@ -173,9 +301,9 @@ void Network::side_nodes(){
 
 	for(int i=0; i<n_nodes; i++){
 		if(fabs(R[i*DIM]-0.0)<TOL){lsideNodes[n_lside]=i; n_lside++;}
-		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){rsideNodes[n_rside]=i; n_rside++;}
+		if(fabs(R[i*DIM]-max_x)<TOL){rsideNodes[n_rside]=i; n_rside++;}
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bsideNodes[n_bside]=i; n_bside++;}
-		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
+		if(fabs(R[i*DIM + 1]-max_y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
 	}
 }
 
@@ -248,10 +376,10 @@ void Network::add_long_range_egdes_y(int n_add, float prestretch){
 		}
 	}
 
-	float s;
+	float s; // will store distances
 	//Add edges between selected nodes
 	for(int i = 0; i < n_add; i++){
-		cout<<n_elems<<endl;
+	
 		edges[2*n_elems] = node_per_circle[i];
 		edges[2*n_elems + 1] = node_per_circle[i + n_add];
 
@@ -414,9 +542,12 @@ void Network::load_network(string& fname) {
 		cout<<"File does not exist!\n";
 		return;
 	}
+
+	// read n_nodes, n_elems
+	read_n(n_nodes, n_elems, fname);
 	
 	//Malloc all variables
-	malloc_network(fname);
+	malloc_network();
 
 	cout<<"Malloc was successful!\n";
 
@@ -612,7 +743,7 @@ void Network::get_forces(bool update_damage = false) {
 				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
-					<<", "<<s/L[j]<<endl;
+					<<", "<<s<<"/"<<L[j]<<endl;
 					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
 			}
@@ -621,7 +752,7 @@ void Network::get_forces(bool update_damage = false) {
 				if(damage[j] > 0.9){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
-					<<", "<<s/L[j]<<endl;
+					<<", "<<s<<"/"<<L[j]<<endl;
 					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
 			}

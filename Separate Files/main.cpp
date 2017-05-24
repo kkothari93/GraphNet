@@ -53,14 +53,21 @@ int main(int argc, char* argv[]) {
 
 	Note: mpirun -np <numprocs> <executable> <filename.msh> 1 
 	*/
+	// int nodes, elems;
 	string path = argv[1];
+	const bool from_dump = true;
+	// read_dump(nodes, elems, path);
+
+	// cout<<nodes<<", "<<elems<<endl;
 
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
-	#define DECL_NET Network test_network(path)
+	#define DECL_NET Network test_network(path, from_dump);
 	#endif
+	
 	DECL_NET;
+	//test_network.plotNetwork(0 + test_network.iter_offset, false);
 
 	if(CRACKED){
 		// Specific crack
@@ -80,14 +87,17 @@ int main(int argc, char* argv[]) {
 	if (*argv[2]!='1') {
 		cout<<"Running serial version of the code: \n";
 		
+		if(!from_dump){
+			// Weight goal: (Because bashing humans over their weight is not enough!)
 
-		// Weight goal: (Because bashing humans over their weight is not enough!)
-		float weight_goal = 1.0e6; // weight of similarly sized triangular mesh network
-		float weight_multiplier;
-		float weight = test_network.get_weight();
-		if (weight<weight_goal){
-			weight_multiplier = test_network.set_weight(weight_goal);
+			float weight_goal = 1.0e6; // weight of similarly sized triangular mesh network
+			float weight_multiplier;
+			float weight = test_network.get_weight();
+			if (weight<weight_goal){
+				weight_multiplier = test_network.set_weight(weight_goal);
+			}
 		}
+		
 
 
 		bool should_stop = test_network.get_stats();
@@ -100,10 +110,15 @@ int main(int argc, char* argv[]) {
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 		memset(plate_forces, 0.0, STEPS*DIM*sizeof(float));
 
-		test_network.plotNetwork(0, true);
+		test_network.plotNetwork(0 + test_network.iter_offset, true);
 
-		// 
-		test_network.dump(0, true);
+		// dump network info to file
+		if(from_dump){ // if rebooting from previous simulation
+			test_network.dump(0+test_network.iter_offset, false);
+		}
+		else{
+			test_network.dump(0+test_network.iter_offset, true);
+		}
 
 		// For time is endless but your time...not so much!  
 		clock_t t = clock();
@@ -117,29 +132,19 @@ int main(int argc, char* argv[]) {
 			test_network.move_top_plate();
 			test_network.get_plate_forces(plate_forces, i);
 			
-			// But add more lines, just to show-off.
+			// But add more lines, just to show-off (and data-logging!).
 			if((i+1)%100 == 0){
 				should_stop = test_network.get_stats();
 				curr_n_edges = test_network.get_current_edges();
 				if(curr_n_edges<=old_n_edges){
-					test_network.plotNetwork(i, false);
-					test_network.dump(i);
+					test_network.plotNetwork(i+test_network.iter_offset, false);
+					test_network.dump(i+test_network.iter_offset);
 				}
 				if(should_stop){
 					break;
 				}
 
 
-				new_time_per_iter = float(clock()-t)/CLOCKS_PER_SEC;
-				if(i==0){
-					old_time_per_iter = new_time_per_iter;
-				}
-
-				if(new_time_per_iter < 0.1*old_time_per_iter){
-					cout<<"Seems like very few edges remain! \n";
-					break;
-				}
-				
 				cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 			}

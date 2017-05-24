@@ -46,18 +46,19 @@ Experiments are then member functions that can be called.
 public:
 	Network();
 	Network(Network const & source);
-	Network(string& fname);
+	Network(string& fname, bool from_dump = false);
 	virtual ~Network();
 	Network const & operator=(Network const & other);
 	virtual void build_network();
-	void side_nodes();
+	void side_nodes(float max_x = MAXBOUND_X, float max_y = MAXBOUND_Y);
 	void remove_duplicates(int&);
 	// add long range edges in the network
 	void add_long_range_egdes_y(int, float);
 	void add_long_range_egdes_random(int, float);
+	void load_from_dump(string&);
 	void apply_crack(Cracklist &);
 	virtual void load_network(string&);
-	virtual void malloc_network(string&);
+	virtual void malloc_network();
 	void make_edge_connections(float dely_allowed = 10.0);
 	virtual void get_forces(bool);
 	virtual void move_top_plate();
@@ -98,6 +99,7 @@ public:
 	
 	bool initialized;	///<Internal variable to check if Network object is initialized
 	
+	int iter_offset;    ///<Offsets iterations in the figure names, if starting where a previous simulation ended.
 	//add moving nodes to speed up force
 	int* moving_nodes;	///<Stores index of all nodes where no boundary condition is applied (i.e. they participate in optimization)
 	int n_moving; 		///<Stores number of moving nodes

@@ -55,6 +55,8 @@ inline float getnorm(const float* vec, const int dim = DIM){
 
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges);
 
+string read_dump(int& n_nodes, int& n_elems, string& fname);
+
 void mapping(int& edge_counter, int elem_type);
 
 void read_n(int& n_nodes, int& n_elems, string& fname);

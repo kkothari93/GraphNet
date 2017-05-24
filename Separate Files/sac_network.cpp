@@ -165,9 +165,9 @@ void sacNetwork::get_forces(bool update_damage = false) {
 /// class variables.
 ///
 // -----------------------------------------------------------------------
-void sacNetwork::malloc_network(string& fname){
+void sacNetwork::malloc_network(){
 	
-	Network::malloc_network(fname);
+	Network::malloc_network();
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
 	m = (int*)malloc(n_elems*si);
@@ -191,9 +191,12 @@ void sacNetwork::load_network(string& fname) {
 		cout<<"File does not exist!\n";
 		return;
 	}
+
+	// read n_nodes, n_elems
+	read_n(n_nodes, n_elems, fname);
 	
 	//Malloc all variables
-	malloc_network(fname);
+	malloc_network();
 
 	cout<<"Malloc was successful!\n";
 
