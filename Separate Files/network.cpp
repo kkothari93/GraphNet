@@ -247,10 +247,10 @@ void Network::load_from_dump(string& dname){
 
 	dump.close();
 
-	//this->plotNetwork(999999, false);
-
 	float max_y = 0;
 
+	// This will find the max_y for the loaded iter from dump file
+	// The max_y is the position for the top plate
 	for(int i = 0; i<n_nodes; i++){
 		y = R[DIM*i + 1];
 		if(y>max_y){
