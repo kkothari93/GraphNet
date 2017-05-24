@@ -143,6 +143,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a45f3e57a4d7e9ab1c6c083f7a7046a3e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="helper__funcs_8h.html#a45f3e57a4d7e9ab1c6c083f7a7046a3e">mapping</a> (int &amp;edge_counter, int elem_type, int n_vertices, stringstream &amp;input, int *edges)</td></tr>
 <tr class="memdesc:a45f3e57a4d7e9ab1c6c083f7a7046a3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Converts mesh elements from GMSH file to edges and nodes. Only implemented elements of &lt;element-id&gt; = 2 or 3. Need to extend for 3D.  <a href="#a45f3e57a4d7e9ab1c6c083f7a7046a3e">More...</a><br /></td></tr>
 <tr class="separator:a45f3e57a4d7e9ab1c6c083f7a7046a3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad580b6a532c7ba2c3691fe202937851a"><td class="memItemLeft" align="right" valign="top">string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="helper__funcs_8h.html#ad580b6a532c7ba2c3691fe202937851a">read_dump</a> (int &amp;n_nodes, int &amp;n_elems, string &amp;fname)</td></tr>
+<tr class="memdesc:ad580b6a532c7ba2c3691fe202937851a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the number of nodes and poly chains left at the end of previous simulation. The code does not take care of parameters. Assumes user will change <a class="el" href="params_8h.html">params.h</a> file while restarting the previous simulation.  <a href="#ad580b6a532c7ba2c3691fe202937851a">More...</a><br /></td></tr>
+<tr class="separator:ad580b6a532c7ba2c3691fe202937851a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6066833b76b48e6aa3613f5d7079b72c"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="helper__funcs_8h.html#a6066833b76b48e6aa3613f5d7079b72c">mapping</a> (int &amp;edge_counter, int elem_type)</td></tr>
 <tr class="memdesc:a6066833b76b48e6aa3613f5d7079b72c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reads the number of edges in elements. Only implemented elements of &lt;element-id&gt; = 2 or 3.  <a href="#a6066833b76b48e6aa3613f5d7079b72c">More...</a><br /></td></tr>
 <tr class="separator:a6066833b76b48e6aa3613f5d7079b72c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -811,6 +814,40 @@ Functions</h2></td></tr>
   </tr>
 </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a class="anchor" id="ad580b6a532c7ba2c3691fe202937851a"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">string read_dump </td>
+          <td>(</td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>n_nodes</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int &amp;&#160;</td>
+          <td class="paramname"><em>n_elems</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">string &amp;&#160;</td>
+          <td class="paramname"><em>fname</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reads the number of nodes and poly chains left at the end of previous simulation. The code does not take care of parameters. Assumes user will change <a class="el" href="params_8h.html">params.h</a> file while restarting the previous simulation. </p>
 
 </div>
 </div>
