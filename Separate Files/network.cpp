@@ -559,7 +559,7 @@ void Network::load_network(string& fname) {
 
 
 	// add long range connections
-	add_long_range_egdes_y(int(log(n_elems)), 0.25);
+	// add_long_range_egdes_y(int(log(n_elems)), 0.25);
 
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
@@ -922,30 +922,30 @@ void Network::plotNetwork(int iter_step, bool first_time){
 		f.close();
 	}
 	else{
-	for(int i = 0; i<n_elems; i++){
-		c = damage[i];
-		node1 = edges[2*i];
-		node2 = edges[2*i+1];
+		for(int i = 0; i<n_elems; i++){
+			c = damage[i];
+			node1 = edges[2*i];
+			node2 = edges[2*i+1];
 
-		if(node1!=-1 && node2!=-1){
-			for(int d = 0; d<DIM; d++){
-					f<<R[node1*DIM+d]<<"\t";
-				}
-				f<<c<<endl;
-			if(!PBC[i]){
+			if(node1!=-1 && node2!=-1){
 				for(int d = 0; d<DIM; d++){
-					f<<R[node2*DIM+d]<<"\t";
+						f<<R[node1*DIM+d]<<"\t";
+					}
+					f<<c<<endl;
+				if(!PBC[i]){
+					for(int d = 0; d<DIM; d++){
+						f<<R[node2*DIM+d]<<"\t";
+					}
 				}
+				else{
+					for(int d = 0; d<DIM; d++){
+						f<<(R[node1*DIM+d]+10)<<"\t";
+					}				
+				}
+			f<<c<<endl<<endl;
 			}
-			else{
-				for(int d = 0; d<DIM; d++){
-					f<<(R[node1*DIM+d]+10)<<"\t";
-				}				
-			}
-		f<<c<<endl<<endl;
 		}
-	}
-	f.close();
+		f.close();
 	}
 	//Plot to h
 	float aspect_ratio = (MAXBOUND_X)/(R[tsideNodes[0]*DIM+1]); 
@@ -1153,6 +1153,42 @@ void Network::move_top_plate(){
 		#pragma unroll
 		for(int d=0; d<DIM; d++){
 			R[node*DIM + d] += TIME_STEP*vel[d]; 
+		}
+	}
+}
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Equilibriates the Network object using an Implicit scheme based
+/// on solving the quasi-dynamic equation
+///
+/// /param C --> damping coefficient
+/// /param max_iter --> maximum allowable iterations in the implicit scheme
+// -----------------------------------------------------------------------
+void Network::qd_optimize(float C, int max_iter){
+	Rp1 = new float[n_moving*DIM]();
+
+	for(int step =0; step< max_iter; step++){
+		// Predictor step
+		get_forces(false);
+		for(id = 0; id < n_moving; id++){
+			node = moving_nodes[id];
+			#pragma unroll
+			for(d = 0; d<DIM; d++){
+				Rp1[id*DIM + d] = R[node*DIM + d];
+				g = forces[DIM*node+d];
+				R[node*DIM + d] += -g/C * TIME_STEP;
+			}		
+		}
+		// Corrector step
+		get_forces(false);
+		for(id = 0; id < n_moving; id++){
+			node = moving_nodes[id];
+			#pragma unroll
+			for(d = 0; d<DIM; d++){
+				g = forces[DIM*node+d];
+				R[node*DIM + d] = Rp1[id*DIM + d] - g/C * TIME_STEP;
+			}		
 		}
 	}
 }

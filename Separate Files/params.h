@@ -8,14 +8,14 @@
 #define STEPS int(SIM_TIME/TIME_STEP)
 #define L_MEAN 150.0f
 #define L_STD 25.0f
-#define MAXBOUND_X 500.0f
-#define MAXBOUND_Y 100.0f
+#define MAXBOUND_X 1000.0f
+#define MAXBOUND_Y 1000.0f
 #define PAD_X MAXBOUND_X*1.03
 #define PAD_Y MAXBOUND_Y*1.03
 #define SACBONDS false
-#define IMPLEMENT_PBC false
-#define FLDR_STRING "trial"
-#define CRACKED false
+#define IMPLEMENT_PBC true
+#define FLDR_STRING "set22_largenet"
+#define CRACKED true
 #define RATE_DAMAGE false
 
 #if CRACKED

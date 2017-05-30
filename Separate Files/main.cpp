@@ -53,13 +53,10 @@ int main(int argc, char* argv[]) {
 
 	Note: mpirun -np <numprocs> <executable> <filename.msh> 1 
 	*/
-	// int nodes, elems;
 	string path = argv[1];
-	const bool from_dump = true;
-	// read_dump(nodes, elems, path);
+	const bool from_dump = false;
 
-	// cout<<nodes<<", "<<elems<<endl;
-
+	// macro for declaring the network (Initialization step)
 	#if SACBONDS
 	#define DECL_NET sacNetwork test_network(path)
 	#else
@@ -67,12 +64,11 @@ int main(int argc, char* argv[]) {
 	#endif
 	
 	DECL_NET;
-	//test_network.plotNetwork(0 + test_network.iter_offset, false);
 
 	if(CRACKED){
 		// Specific crack
 		Crack a;
-		a.setter(MAXBOUND_X, MAXBOUND_Y/2.0, MAXBOUND_X/10.0, MAXBOUND_Y/10.0, 0.0, 1.0);
+		a.setter(MAXBOUND_X/2.0, MAXBOUND_Y/2.0, MAXBOUND_X/10.0, MAXBOUND_Y/20.0, 0.0, 1.0);
 
 		Cracklist definite_cracks(a);
 		test_network.apply_crack(definite_cracks);
@@ -213,6 +209,11 @@ int main(int argc, char* argv[]) {
 		float * forces_buffer; 
 		forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the forces from all nodes
 		// Force buffer needed to calculate plate_forces
+
+		//damage_buffer needed for plotting
+		size_t d_size = main_network->n_elems*world_size;
+		float * damage_buffer; 
+		damage_buffer = (float*)malloc(d_size*sizeof(float));
 		
 		int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 		cout<<"world rank: "<<world_rank<< " chunk len = "<<main_network->chunk_nodes_len<<endl;
@@ -268,9 +269,11 @@ int main(int argc, char* argv[]) {
 
 			if((iter+1)%NSYNC == 0){
 				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+				MPI_Gather(main_network->damage, main_network->n_elems, MPI_FLOAT, damage_buffer, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			}
 
-			// syncing R and forces
+			float t_damage = 0.0;
+			// syncing R and forces, damage
 			if (world_rank == 0) {
 				int node_to_sync  = 0;
 				for (int i = 0; i < world_size; i += 1) {
@@ -288,8 +291,16 @@ int main(int argc, char* argv[]) {
 							}
 						}
 					}
+					// damage update
+					if((iter+1)%NSYNC == 0){
+						for(int j=0; j < main_network->n_elems; j++){
+							t_damage = main_network->damage[j];
+							main_network->damage[j] = (t_damage > damage_buffer[i*world_size + j]) ? t_damage :  damage_buffer[i*world_size + j];
+						}
+					}
 					
-				}
+				} // sync for loop ends here
+
 				if((iter+1)%NSYNC == 0){
 					cout << "Synced forces" << endl;
 					main_network->get_plate_forces(plate_forces, iter/NSYNC);
