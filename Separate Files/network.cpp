@@ -1114,7 +1114,7 @@ float Network::get_weight(){
 	float sum_length = 0.0;
 	for(int i = 0; i < n_elems; i++){
 		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
-			sum_length += L[i];
+			sum_length += L_MEAN;
 		}
 	}
 	cout<<"\nNetwork weight is "<<sum_length<<"\n";
@@ -1137,6 +1137,7 @@ float Network::set_weight(float weight){
 	}
 	cout<<"\n Network weight reset to "<<weight<<"\n";
 	cout<<"Average L now is : "<<weight/n_elems<<"\n";
+	weight_multiplier = alpha;
 	return alpha;
 }
 
@@ -1166,7 +1167,9 @@ void Network::move_top_plate(){
 /// /param max_iter --> maximum allowable iterations in the implicit scheme
 // -----------------------------------------------------------------------
 void Network::qd_optimize(float C, int max_iter){
-	Rp1 = new float[n_moving*DIM]();
+	float* Rp1 = new float[n_moving*DIM]();
+	float g;
+	int id, d, node;
 
 	for(int step =0; step< max_iter; step++){
 		// Predictor step
@@ -1177,7 +1180,7 @@ void Network::qd_optimize(float C, int max_iter){
 			for(d = 0; d<DIM; d++){
 				Rp1[id*DIM + d] = R[node*DIM + d];
 				g = forces[DIM*node+d];
-				R[node*DIM + d] += -g/C * TIME_STEP;
+				R[node*DIM + d] += g/C * TIME_STEP;
 			}		
 		}
 		// Corrector step
@@ -1187,10 +1190,13 @@ void Network::qd_optimize(float C, int max_iter){
 			#pragma unroll
 			for(d = 0; d<DIM; d++){
 				g = forces[DIM*node+d];
-				R[node*DIM + d] = Rp1[id*DIM + d] - g/C * TIME_STEP;
+				R[node*DIM + d] = Rp1[id*DIM + d] + g/C * TIME_STEP;
 			}		
 		}
 	}
+	// update damage
+	get_forces(true);
+	delete[] Rp1;
 }
 
 // ----------------------------------------------------------------------- 

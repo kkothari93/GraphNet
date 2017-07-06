@@ -45,7 +45,7 @@ class xlreader():
     def __init__(self, fname):
         """ Initializes the xlreader class
 
-        @ fname: takes the parameter excel file and uses the same to read the parameters 
+        @ fname: takes the parameter excel file and uses the same to read the parameters
         """
         self.__wb = xl.load_workbook(filename=fname)
         self.ws = self.__wb.active
@@ -86,8 +86,8 @@ class xlreader():
 
         """
         for i, param in enumerate(self.param_list):
-          fldr_string = '"set%d"'%(n+i)
-          fldr_name = "set%d"%(n+i)
+          fldr_string = '"%s"'%(param['FLDR_STRING'])
+          fldr_name = "%s"%(param['FLDR_STRING'])
           if not os.path.exists(fldr_name):
             os.makedirs(fldr_name)
           gen_param_file(param, fldr_string)
@@ -98,7 +98,7 @@ def main(n):
     """Main script
 
     Takes in parameter n to identify where the set indexing will start
-    
+
     """
     a = xlreader("param_list.xlsx")
     a.compile(n)

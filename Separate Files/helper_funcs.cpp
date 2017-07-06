@@ -297,8 +297,9 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 // -----------------------------------------------------------------------
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
-	// std::normal_distribution<float> generator(L_MEAN, L_STD);
+	seed.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	#pragma unroll
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
@@ -342,9 +343,10 @@ float getabsmax(float* arr, size_t sizeofarr){
 // -----------------------------------------------------------------------
 void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	// std::normal_distribution<float> generator(L_MEAN, L_STD);
-	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
-	std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.01*L_MEAN);
+	seed.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
+	std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.1*L_MEAN);
 	std::uniform_int_distribution<int> number(2, 4);
 	#pragma unroll
 	for(int i=0; i<n_elems; i++){

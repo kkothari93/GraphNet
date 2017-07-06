@@ -295,7 +295,6 @@ void MPI_Network::get_forces(bool update_damage = false) {
 				}
 			}
 			else{
-				damage[j] = s/L[j];
 				if(damage[j] > 0.9){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \

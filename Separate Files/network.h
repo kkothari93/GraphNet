@@ -64,7 +64,7 @@ public:
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
 	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
-	virtual void qd_optimize(float C = 0.1, int max_iter = 800);
+	virtual void qd_optimize(float C = 0.001, int max_iter = 800);
 
 
 	float get_weight();
@@ -100,7 +100,8 @@ public:
 	
 	bool initialized;	///<Internal variable to check if Network object is initialized
 	
-	int iter_offset;    ///<Offsets iterations in the figure names, if starting where a previous simulation ended.
+	float weight_multiplier = 1.0; ///<Weight multiplier in case of weight increases
+	int iter_offset = 0;    ///<Offsets iterations in the figure names, if starting where a previous simulation ended.
 	//add moving nodes to speed up force
 	int* moving_nodes;	///<Stores index of all nodes where no boundary condition is applied (i.e. they participate in optimization)
 	int n_moving; 		///<Stores number of moving nodes

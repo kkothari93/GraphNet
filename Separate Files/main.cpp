@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 
 	// macro for declaring the network (Initialization step)
 	#if SACBONDS
-	#define DECL_NET sacNetwork test_network(path)
+	#define DECL_NET sacNetwork test_network(path, from_dump);
 	#else
 	#define DECL_NET Network test_network(path, from_dump);
 	#endif
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
 		test_network.apply_crack(definite_cracks);
 		cout<<__LINE__<<endl;
 
-		// Random cracks
+		// Random cracks. Uncomment appropriately to see that
 		// Cracklist random_cracks(4);
 		// test_network.apply_crack(random_cracks);
 	}
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 		if(!from_dump){
 			// Weight goal: (Because bashing humans over their weight is not enough!)
 
-			float weight_goal = 1.0e6; // weight of similarly sized triangular mesh network
+			float weight_goal = 0.6e6; // weight of similarly sized triangular mesh network
 			float weight_multiplier;
 			float weight = test_network.get_weight();
 			if (weight<weight_goal){
@@ -124,6 +124,7 @@ int main(int argc, char* argv[]) {
 		
 		for(int i = 0; i<STEPS; i++ ){
 			// The three lines that do all the work
+			// test_network.qd_optimize();
 			test_network.optimize();
 			test_network.move_top_plate();
 			test_network.get_plate_forces(plate_forces, i);

@@ -1,7 +1,8 @@
 var searchData=
 [
-  ['sacnetwork',['sacNetwork',['../classsacNetwork.html#a3f1d97e98c0aca060608dda1717fa7ba',1,'sacNetwork::sacNetwork()'],['../classsacNetwork.html#a4e64b1dd1a3f9355bce0140a0884d4e3',1,'sacNetwork::sacNetwork(sacNetwork const &amp;)'],['../classsacNetwork.html#a9a255e3808a26126d4307f3dc83377fc',1,'sacNetwork::sacNetwork(string &amp;fname)']]],
-  ['set_5fweight',['set_weight',['../classNetwork.html#a908c065dae98093248f4d5f90c75620b',1,'Network']]],
-  ['setter',['setter',['../classCrack.html#a02376d9329d702ed2ff8da46809f53ec',1,'Crack::setter(float, float, float, float, float, float)'],['../classCrack.html#ab058dc6af7d3cf2ff2ca415f8c8c5ce3',1,'Crack::setter(Crack &amp;)']]],
-  ['side_5fnodes',['side_nodes',['../classNetwork.html#a0ea40e3b751c70ab6c8e7b172fb6de62',1,'Network']]]
+  ['read_5fdump',['read_dump',['../helper__funcs_8cpp.html#a4a212831b67aad80250b526f9284cbb9',1,'read_dump(int &amp;n_nodes, int &amp;n_elems, string &amp;dname):&#160;helper_funcs.cpp'],['../helper__funcs_8h.html#ad580b6a532c7ba2c3691fe202937851a',1,'read_dump(int &amp;n_nodes, int &amp;n_elems, string &amp;fname):&#160;helper_funcs.cpp']]],
+  ['read_5fn',['read_n',['../helper__funcs_8cpp.html#a219eca7434f1d9340193445406fbfbfb',1,'read_n(int &amp;n_nodes, int &amp;n_elems, string &amp;fname):&#160;helper_funcs.cpp'],['../helper__funcs_8h.html#a219eca7434f1d9340193445406fbfbfb',1,'read_n(int &amp;n_nodes, int &amp;n_elems, string &amp;fname):&#160;helper_funcs.cpp']]],
+  ['remove_5fduplicates',['remove_duplicates',['../classNetwork.html#a874601266ecdd459612f2e78b588bf6e',1,'Network']]],
+  ['rewrite_5fmoving_5fnodes',['rewrite_moving_nodes',['../classMPI__Network.html#a9df4d5d6c65eb35948e9a8939d038b2d',1,'MPI_Network']]],
+  ['rinset',['Rinset',['../mpi__network_8cpp.html#a302ae5d7f77a21e6869a5b71fb5fafcd',1,'mpi_network.cpp']]]
 ];

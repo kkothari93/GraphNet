@@ -122,9 +122,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a4e64b1dd1a3f9355bce0140a0884d4e3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a4e64b1dd1a3f9355bce0140a0884d4e3">sacNetwork</a> (<a class="el" href="classsacNetwork.html">sacNetwork</a> const &amp;)</td></tr>
 <tr class="memdesc:a4e64b1dd1a3f9355bce0140a0884d4e3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy constructor.  <a href="#a4e64b1dd1a3f9355bce0140a0884d4e3">More...</a><br /></td></tr>
 <tr class="separator:a4e64b1dd1a3f9355bce0140a0884d4e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a255e3808a26126d4307f3dc83377fc"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a9a255e3808a26126d4307f3dc83377fc">sacNetwork</a> (string &amp;fname)</td></tr>
-<tr class="memdesc:a9a255e3808a26126d4307f3dc83377fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor that instantiates a <a class="el" href="classsacNetwork.html">sacNetwork</a> object according to given {fname} file. Please note that there are no checks made on the GMSH .msh filepath and that responsibility is left to the user.  <a href="#a9a255e3808a26126d4307f3dc83377fc">More...</a><br /></td></tr>
-<tr class="separator:a9a255e3808a26126d4307f3dc83377fc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a38a0883ffcbb5684cd8c746c41f14408"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a38a0883ffcbb5684cd8c746c41f14408">sacNetwork</a> (string &amp;fname, bool from_dump=false)</td></tr>
+<tr class="memdesc:a38a0883ffcbb5684cd8c746c41f14408"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor that instantiates a <a class="el" href="classsacNetwork.html">sacNetwork</a> object according to given {fname} file. Please note that there are no checks made on the GMSH .msh filepath and that responsibility is left to the user.  <a href="#a38a0883ffcbb5684cd8c746c41f14408">More...</a><br /></td></tr>
+<tr class="separator:a38a0883ffcbb5684cd8c746c41f14408"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3baf54983ce1c527e960446edef5a197"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a3baf54983ce1c527e960446edef5a197">clear</a> ()</td></tr>
 <tr class="memdesc:a3baf54983ce1c527e960446edef5a197"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clears extra variables declared by <a class="el" href="classsacNetwork.html">sacNetwork</a> object. Called by destructor.  <a href="#a3baf54983ce1c527e960446edef5a197">More...</a><br /></td></tr>
 <tr class="separator:a3baf54983ce1c527e960446edef5a197"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -132,7 +132,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a8db9143dfb1964e1d29673cd7b713d5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extends parent class' function to add memory allocation for extra class variables.  <a href="#a8db9143dfb1964e1d29673cd7b713d5e">More...</a><br /></td></tr>
 <tr class="separator:a8db9143dfb1964e1d29673cd7b713d5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4955c5290fb89a5bd506636221526bda"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a4955c5290fb89a5bd506636221526bda">load_network</a> (string &amp;)</td></tr>
-<tr class="memdesc:a4955c5290fb89a5bd506636221526bda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overrides parent class' function to initialize extra variables. Called by <a class="el" href="classsacNetwork.html#a9a255e3808a26126d4307f3dc83377fc" title="Constructor that instantiates a sacNetwork object according to given {fname} file. Please note that there are no checks made on the GMSH .msh filepath and that responsibility is left to the user. ">sacNetwork(string&amp; fname)</a>.  <a href="#a4955c5290fb89a5bd506636221526bda">More...</a><br /></td></tr>
+<tr class="memdesc:a4955c5290fb89a5bd506636221526bda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overrides parent class' function to initialize extra variables. Called by <a class="el" href="classsacNetwork.html">sacNetwork(string&amp; fname)</a>.  <a href="#a4955c5290fb89a5bd506636221526bda">More...</a><br /></td></tr>
 <tr class="separator:a4955c5290fb89a5bd506636221526bda"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a47ba7200c0fb514e4c3afada27fa0dc1"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsacNetwork.html#a47ba7200c0fb514e4c3afada27fa0dc1">get_forces</a> (bool) override</td></tr>
 <tr class="memdesc:a47ba7200c0fb514e4c3afada27fa0dc1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Overrides parent class' function. Calculates forces along edges of the polymer network graph (i.e forces in each polymer). The forces are then assigned to nodes which prepares the network for the optimization step. If update_damage is true, the appropriate damage metric is also updated. If damage exceeds predefined thresholds, the edge is broken. Hidden lengths are also opened according to damage in these hidden bonds. The function does not return anything as it updates the objects forces directly.  <a href="#a47ba7200c0fb514e4c3afada27fa0dc1">More...</a><br /></td></tr>
@@ -186,6 +186,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5a08cb2fc76ec5b446ca5812347f6278 inherit pub_methods_classNetwork"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a5a08cb2fc76ec5b446ca5812347f6278">optimize</a> (float eta=0.1, float alpha=0.9, int max_iter=800)</td></tr>
 <tr class="memdesc:a5a08cb2fc76ec5b446ca5812347f6278 inherit pub_methods_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equilibriates the <a class="el" href="classNetwork.html">Network</a> object using RMSProp algorithm due to G. Hinton et al (a gradient based force minimization over each node). Stops when maximum force on node is less than TOL specified in <a class="el" href="params_8h.html">params.h</a> or max_iter is reached.  <a href="#a5a08cb2fc76ec5b446ca5812347f6278">More...</a><br /></td></tr>
 <tr class="separator:a5a08cb2fc76ec5b446ca5812347f6278 inherit pub_methods_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29a06d00dad55b08533659d93d8e67aa inherit pub_methods_classNetwork"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a29a06d00dad55b08533659d93d8e67aa">qd_optimize</a> (float C=0.001, int max_iter=800)</td></tr>
+<tr class="memdesc:a29a06d00dad55b08533659d93d8e67aa inherit pub_methods_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equilibriates the <a class="el" href="classNetwork.html">Network</a> object using an Implicit scheme based on solving the quasi-dynamic equation.  <a href="#a29a06d00dad55b08533659d93d8e67aa">More...</a><br /></td></tr>
+<tr class="separator:a29a06d00dad55b08533659d93d8e67aa inherit pub_methods_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e365c2a3b1e4421939a948a04db4bae inherit pub_methods_classNetwork"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a1e365c2a3b1e4421939a948a04db4bae">get_weight</a> ()</td></tr>
 <tr class="memdesc:a1e365c2a3b1e4421939a948a04db4bae inherit pub_methods_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the total length of all polymer chains active in the network.  <a href="#a1e365c2a3b1e4421939a948a04db4bae">More...</a><br /></td></tr>
 <tr class="separator:a1e365c2a3b1e4421939a948a04db4bae inherit pub_methods_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -269,7 +272,10 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ae9e725a2eaaf5468eec74ee597395bef inherit pub_attribs_classNetwork"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#ae9e725a2eaaf5468eec74ee597395bef">initialized</a></td></tr>
 <tr class="memdesc:ae9e725a2eaaf5468eec74ee597395bef inherit pub_attribs_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Internal variable to check if <a class="el" href="classNetwork.html">Network</a> object is initialized.  <a href="#ae9e725a2eaaf5468eec74ee597395bef">More...</a><br /></td></tr>
 <tr class="separator:ae9e725a2eaaf5468eec74ee597395bef inherit pub_attribs_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4ac03a658e12c19a6a847df32470b625 inherit pub_attribs_classNetwork"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a4ac03a658e12c19a6a847df32470b625">iter_offset</a></td></tr>
+<tr class="memitem:af323420b24fbaa7ba559ce9cd7d9556c inherit pub_attribs_classNetwork"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#af323420b24fbaa7ba559ce9cd7d9556c">weight_multiplier</a> = 1.0</td></tr>
+<tr class="memdesc:af323420b24fbaa7ba559ce9cd7d9556c inherit pub_attribs_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight multiplier in case of weight increases.  <a href="#af323420b24fbaa7ba559ce9cd7d9556c">More...</a><br /></td></tr>
+<tr class="separator:af323420b24fbaa7ba559ce9cd7d9556c inherit pub_attribs_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ac03a658e12c19a6a847df32470b625 inherit pub_attribs_classNetwork"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a4ac03a658e12c19a6a847df32470b625">iter_offset</a> = 0</td></tr>
 <tr class="memdesc:a4ac03a658e12c19a6a847df32470b625 inherit pub_attribs_classNetwork"><td class="mdescLeft">&#160;</td><td class="mdescRight">Offsets iterations in the figure names, if starting where a previous simulation ended.  <a href="#a4ac03a658e12c19a6a847df32470b625">More...</a><br /></td></tr>
 <tr class="separator:a4ac03a658e12c19a6a847df32470b625 inherit pub_attribs_classNetwork"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44cd78da5f8e25d3ac6d5db07b6a7740 inherit pub_attribs_classNetwork"><td class="memItemLeft" align="right" valign="top">int *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a44cd78da5f8e25d3ac6d5db07b6a7740">moving_nodes</a></td></tr>
@@ -332,7 +338,7 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="a9a255e3808a26126d4307f3dc83377fc"></a>
+<a class="anchor" id="a38a0883ffcbb5684cd8c746c41f14408"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
@@ -340,8 +346,18 @@ Public Attributes</h2></td></tr>
           <td class="memname">sacNetwork::sacNetwork </td>
           <td>(</td>
           <td class="paramtype">string &amp;&#160;</td>
-          <td class="paramname"><em>fname</em></td><td>)</td>
+          <td class="paramname"><em>fname</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
           <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>from_dump</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -442,7 +458,7 @@ Public Attributes</h2></td></tr>
 </table>
 </div><div class="memdoc">
 
-<p>Overrides parent class' function to initialize extra variables. Called by <a class="el" href="classsacNetwork.html#a9a255e3808a26126d4307f3dc83377fc" title="Constructor that instantiates a sacNetwork object according to given {fname} file. Please note that there are no checks made on the GMSH .msh filepath and that responsibility is left to the user. ">sacNetwork(string&amp; fname)</a>. </p>
+<p>Overrides parent class' function to initialize extra variables. Called by <a class="el" href="classsacNetwork.html">sacNetwork(string&amp; fname)</a>. </p>
 
 <p>Reimplemented from <a class="el" href="classNetwork.html#ab8976c803c1c68d0c725ca1293470756">Network</a>.</p>
 

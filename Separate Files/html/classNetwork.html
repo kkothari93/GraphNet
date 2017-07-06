@@ -162,6 +162,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5a08cb2fc76ec5b446ca5812347f6278"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a5a08cb2fc76ec5b446ca5812347f6278">optimize</a> (float eta=0.1, float alpha=0.9, int max_iter=800)</td></tr>
 <tr class="memdesc:a5a08cb2fc76ec5b446ca5812347f6278"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equilibriates the <a class="el" href="classNetwork.html">Network</a> object using RMSProp algorithm due to G. Hinton et al (a gradient based force minimization over each node). Stops when maximum force on node is less than TOL specified in <a class="el" href="params_8h.html">params.h</a> or max_iter is reached.  <a href="#a5a08cb2fc76ec5b446ca5812347f6278">More...</a><br /></td></tr>
 <tr class="separator:a5a08cb2fc76ec5b446ca5812347f6278"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29a06d00dad55b08533659d93d8e67aa"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a29a06d00dad55b08533659d93d8e67aa">qd_optimize</a> (float C=0.001, int max_iter=800)</td></tr>
+<tr class="memdesc:a29a06d00dad55b08533659d93d8e67aa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Equilibriates the <a class="el" href="classNetwork.html">Network</a> object using an Implicit scheme based on solving the quasi-dynamic equation.  <a href="#a29a06d00dad55b08533659d93d8e67aa">More...</a><br /></td></tr>
+<tr class="separator:a29a06d00dad55b08533659d93d8e67aa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1e365c2a3b1e4421939a948a04db4bae"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a1e365c2a3b1e4421939a948a04db4bae">get_weight</a> ()</td></tr>
 <tr class="memdesc:a1e365c2a3b1e4421939a948a04db4bae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the total length of all polymer chains active in the network.  <a href="#a1e365c2a3b1e4421939a948a04db4bae">More...</a><br /></td></tr>
 <tr class="separator:a1e365c2a3b1e4421939a948a04db4bae"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -243,7 +246,10 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ae9e725a2eaaf5468eec74ee597395bef"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#ae9e725a2eaaf5468eec74ee597395bef">initialized</a></td></tr>
 <tr class="memdesc:ae9e725a2eaaf5468eec74ee597395bef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Internal variable to check if <a class="el" href="classNetwork.html">Network</a> object is initialized.  <a href="#ae9e725a2eaaf5468eec74ee597395bef">More...</a><br /></td></tr>
 <tr class="separator:ae9e725a2eaaf5468eec74ee597395bef"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4ac03a658e12c19a6a847df32470b625"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a4ac03a658e12c19a6a847df32470b625">iter_offset</a></td></tr>
+<tr class="memitem:af323420b24fbaa7ba559ce9cd7d9556c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#af323420b24fbaa7ba559ce9cd7d9556c">weight_multiplier</a> = 1.0</td></tr>
+<tr class="memdesc:af323420b24fbaa7ba559ce9cd7d9556c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight multiplier in case of weight increases.  <a href="#af323420b24fbaa7ba559ce9cd7d9556c">More...</a><br /></td></tr>
+<tr class="separator:af323420b24fbaa7ba559ce9cd7d9556c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ac03a658e12c19a6a847df32470b625"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a4ac03a658e12c19a6a847df32470b625">iter_offset</a> = 0</td></tr>
 <tr class="memdesc:a4ac03a658e12c19a6a847df32470b625"><td class="mdescLeft">&#160;</td><td class="mdescRight">Offsets iterations in the figure names, if starting where a previous simulation ended.  <a href="#a4ac03a658e12c19a6a847df32470b625">More...</a><br /></td></tr>
 <tr class="separator:a4ac03a658e12c19a6a847df32470b625"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a44cd78da5f8e25d3ac6d5db07b6a7740"><td class="memItemLeft" align="right" valign="top">int *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a44cd78da5f8e25d3ac6d5db07b6a7740">moving_nodes</a></td></tr>
@@ -910,6 +916,43 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="a29a06d00dad55b08533659d93d8e67aa"></a>
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void Network::qd_optimize </td>
+          <td>(</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>C</em> = <code>0.001</code>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>max_iter</em> = <code>800</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">virtual</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Equilibriates the <a class="el" href="classNetwork.html">Network</a> object using an Implicit scheme based on solving the quasi-dynamic equation. </p>
+<p>/param C &ndash;&gt; damping coefficient /param max_iter &ndash;&gt; maximum allowable iterations in the implicit scheme </p>
+
+</div>
+</div>
 <a class="anchor" id="a874601266ecdd459612f2e78b588bf6e"></a>
 <div class="memitem">
 <div class="memproto">
@@ -1065,7 +1108,7 @@ Public Attributes</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int Network::iter_offset</td>
+          <td class="memname">int Network::iter_offset = 0</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -1267,6 +1310,20 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Stores index of crosslinker nodes on the top edge of the network sample. </p>
+
+</div>
+</div>
+<a class="anchor" id="af323420b24fbaa7ba559ce9cd7d9556c"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Network::weight_multiplier = 1.0</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Weight multiplier in case of weight increases. </p>
 
 </div>
 </div>

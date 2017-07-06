@@ -20,9 +20,17 @@ sacNetwork::sacNetwork(){
 /// \param fname --> takes a filename and instantiates Network object
 ///
 // ----------------------------------------------------------------------- 
-sacNetwork::sacNetwork(string& fname){
+sacNetwork::sacNetwork(string& fname, bool from_dump){
 	initialized = false;
-	load_network(fname);
+	if(from_dump){
+		load_from_dump(fname);
+	}
+
+	else{
+		load_network(fname);
+		iter_offset = 0;
+	}
+
 	initialized = true;
 }
 
@@ -138,15 +146,28 @@ void sacNetwork::get_forces(bool update_damage = false) {
 		//update damage if needed
 		if (update_damage){
 			if(m[j] > 0){
-				sacdamage[j] += kf(force)*TIME_STEP;
+				if(RATE_DAMAGE){
+					sacdamage[j] += kf(force)*TIME_STEP;
+				}
+				else {
+					sacdamage[j] = s/L[j]/.72;
+				}
+
 				if(sacdamage[j] > 1.0){
-					L[j] += (L_MEAN - L[j])/m[j] ; 
+					if(weight_multiplier*L_MEAN > L[j]){
+						L[j] += (weight_multiplier*L_MEAN - L[j])/m[j];
+					}  
 					m[j] -= 1;
 					sacdamage[j] = 0.0;
 					force = force_wlc(s, L[j]);
 				}
 			}
-			damage[j] += kfe(force)*TIME_STEP;
+			if(RATE_DAMAGE){
+				damage[j] += kfe(force)*TIME_STEP;
+			}
+			else {
+				damage[j] = s/L[j]/0.9;
+			}
 			
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
@@ -154,7 +175,7 @@ void sacNetwork::get_forces(bool update_damage = false) {
 				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s/L = "<<force \
 				<<", "<<s/L[j]<<endl;
 				edges[j*2] = -1; edges[j*2+1] = -1;
-		}
+			}
 		}
 	}
 
