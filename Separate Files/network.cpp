@@ -479,7 +479,8 @@ void Network::remove_duplicates(int& n_elems){
 	int node1, node2;
 	int d_node1, d_node2, i,k;
 
-	for(i=0;i<n_elems-1;i++){
+	for(i=0;i<n_elems;i++){
+		// here n_elems is needed instead of n_elems-1 for correct counting in counter
 		node1 = edges[2*i];
 		node2 = edges[2*i+1];
 		if(node1!=-2 && node2!=-2){
@@ -494,7 +495,7 @@ void Network::remove_duplicates(int& n_elems){
 			counter++;
 		}
 	}
-	cout<<counter<<endl;
+	
 	int* buffer = new int[2*counter];
 	for(i=0, k=0;i<n_elems;i++){
 		node1 = edges[2*i];
@@ -505,7 +506,7 @@ void Network::remove_duplicates(int& n_elems){
 			k++;
 		}
 	}
-
+	
 	for(i=0, k=0;i<n_elems;i++){
 		if(k<counter){
 			edges[2*i] = buffer[2*k];
@@ -517,6 +518,7 @@ void Network::remove_duplicates(int& n_elems){
 			edges[2*i+1] = -1;
 		}
 	}
+
 	cout<<n_elems-counter<<" duplicates removed!\n";
 	n_elems = counter;
 	delete[] buffer;
@@ -557,7 +559,6 @@ void Network::load_network(string& fname) {
 	// remove duplicate edges
 	remove_duplicates(n_elems);
 
-
 	// add long range connections
 	// add_long_range_egdes_y(int(log(n_elems)), 0.25);
 
@@ -591,7 +592,6 @@ void Network::load_network(string& fname) {
 		this->make_edge_connections(15.0);
 		cout<<"Number after new connections made: "<<n_elems<<endl;
 	}
-	cout<<__LINE__<<endl;
 }
 
 // ----------------------------------------------------------------------- 
@@ -748,8 +748,8 @@ void Network::get_forces(bool update_damage = false) {
 				}
 			}
 			else{
-				damage[j] = s/L[j];
-				if(damage[j] > 0.9){
+				damage[j] = s/L[j]/0.9;
+				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
 					<<", "<<s<<"/"<<L[j]<<endl;
@@ -1098,7 +1098,7 @@ bool Network::get_stats(){
 	cout<<"node-node x/L max: "<<max_t<<endl;
 
 
-	if((float)c/(float)n_elems < 0.02){
+	if((float)c/(float)n_elems < 0.05){
 		cout<<"Too few edges remain in given mesh! Exiting...\n";
 		return true;
 	}
@@ -1171,7 +1171,7 @@ void Network::qd_optimize(float C, int max_iter){
 	float g;
 	int id, d, node;
 
-	for(int step =0; step< max_iter; step++){
+	for(int step =0; step<max_iter; step++){
 		// Predictor step
 		get_forces(false);
 		for(id = 0; id < n_moving; id++){

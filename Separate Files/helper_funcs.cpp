@@ -347,6 +347,7 @@ void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int 
 	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
 	std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.1*L_MEAN);
+	// std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.1*L_MEAN);
 	std::uniform_int_distribution<int> number(2, 4);
 	#pragma unroll
 	for(int i=0; i<n_elems; i++){

@@ -93,11 +93,11 @@ void sacNetwork::get_forces(bool update_damage = false) {
 	float force;
 
 
-	memset(forces, 0.0, n_nodes*DIM*sizeof(forces));
+	memset(forces, 0.0, n_nodes*DIM*sizeof(float));
 
 	for (j = 0; j < n_elems; j++){
-		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
-		node1 = edges[j * 2]; 
+		// read the two points that form the edge 
+		node1 = edges[j * 2]; // 2 because 2 points make an edge! Duh.
 		node2 = edges[j * 2 + 1];
 		
 		// check if pair exists
@@ -158,10 +158,23 @@ void sacNetwork::get_forces(bool update_damage = false) {
 						L[j] += (weight_multiplier*L_MEAN - L[j])/m[j];
 					}  
 					m[j] -= 1;
-					sacdamage[j] = 0.0;
+					sacdamage[j] -= 1.0;
 					force = force_wlc(s, L[j]);
+					convert_to_vector(edge_force, force, rhat);
+
+					#pragma unroll
+					for (k = 0; k < DIM; k++){
+						forces[node1*DIM + k] = 0.0;
+						forces[node2*DIM + k] = 0.0;
+					}
+					#pragma unroll
+					for (k = 0; k < DIM; k++){
+						forces[node1*DIM + k] -= edge_force[k];
+						forces[node2*DIM + k] += edge_force[k];
+					}
 				}
 			}
+
 			if(RATE_DAMAGE){
 				damage[j] += kfe(force)*TIME_STEP;
 			}

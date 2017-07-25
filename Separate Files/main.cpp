@@ -68,13 +68,14 @@ int main(int argc, char* argv[]) {
 	if(CRACKED){
 		// Specific crack
 		Crack a;
-		a.setter(MAXBOUND_X/2.0, MAXBOUND_Y/2.0, MAXBOUND_X/10.0, MAXBOUND_Y/20.0, 0.0, 1.0);
+		a.setter(MAXBOUND_X, MAXBOUND_Y/2.0, MAXBOUND_X/2.0, MAXBOUND_Y/10.0, 0.0, 1.0);
 
 		Cracklist definite_cracks(a);
 		test_network.apply_crack(definite_cracks);
-		cout<<__LINE__<<endl;
 
-		// Random cracks. Uncomment appropriately to see that
+		// Random cracks. Uncomment next two lines and comment the previous four
+		// to see that effect
+
 		// Cracklist random_cracks(4);
 		// test_network.apply_crack(random_cracks);
 	}
@@ -124,9 +125,10 @@ int main(int argc, char* argv[]) {
 		
 		for(int i = 0; i<STEPS; i++ ){
 			// The three lines that do all the work
-			// test_network.qd_optimize();
-			test_network.optimize();
-			test_network.move_top_plate();
+
+			test_network.qd_optimize(); // quasi-dynamic equation solution
+			// test_network.optimize(); // quasi-static equation solution
+			test_network.move_top_plate(); 
 			test_network.get_plate_forces(plate_forces, i);
 			
 			// But add more lines, just to show-off (and data-logging!).
