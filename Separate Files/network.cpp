@@ -1001,9 +1001,10 @@ int Network::get_current_edges(){
 // ----------------------------------------------------------------------- 
 /// \brief Prints out certain statistics of the network object.
 ///
-/// 
+/// /param curr_force --> takes in curr_force on plate, returns True,
+/// 					  if curr_force <= 0.1*__init_force
 // -----------------------------------------------------------------------
-bool Network::get_stats(){
+bool Network::get_stats(float curr_force){
 	int node1, node2;
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
@@ -1100,6 +1101,10 @@ bool Network::get_stats(){
 
 	if((float)c/(float)n_elems < 0.05){
 		cout<<"Too few edges remain in given mesh! Exiting...\n";
+		return true;
+	}
+	if(fabs(curr_force) <= 0.1*fabs(__init_force)){
+		cout<<"Force too low! Exiting...\n";
 		return true;
 	}
 	return false;
@@ -1256,6 +1261,9 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 		if(DIM>2){
 			plate_forces[iter*DIM+2] = forces[node*DIM + 2];
 		}
+	}
+	if(iter==0){
+		__init_force = plate_forces[1]; // initial force
 	}
 }
 

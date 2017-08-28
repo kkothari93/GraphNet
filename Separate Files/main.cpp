@@ -80,22 +80,22 @@ int main(int argc, char* argv[]) {
 		// test_network.apply_crack(random_cracks);
 	}
 
-	//*argv[2] if is working now. Do not change
+	//*argv[2] is working now. Do not change
 	if (*argv[2]!='1') {
 		cout<<"Running serial version of the code: \n";
 		
 		if(!from_dump){
 			// Weight goal: (Because bashing humans over their weight is not enough!)
-
+			// earlier weight goal was 0.6M
+			// changed to see effect of crosslinker concentration
 			float weight_goal = 0.6e6; // weight of similarly sized triangular mesh network
 			float weight_multiplier;
 			float weight = test_network.get_weight();
-			if (weight<weight_goal){
+			if (weight!=weight_goal){
 				weight_multiplier = test_network.set_weight(weight_goal);
 			}
 		}
 		
-
 
 		bool should_stop = test_network.get_stats();
 		int old_n_edges = test_network.get_current_edges();
@@ -133,11 +133,11 @@ int main(int argc, char* argv[]) {
 			
 			// But add more lines, just to show-off (and data-logging!).
 			if((i+1)%100 == 0){
-				should_stop = test_network.get_stats();
+				should_stop = test_network.get_stats(test_network.__init_force);
 				curr_n_edges = test_network.get_current_edges();
 				if(curr_n_edges<=old_n_edges){
 					test_network.plotNetwork(i+test_network.iter_offset, false);
-					test_network.dump(i+test_network.iter_offset);
+					//test_network.dump(i+test_network.iter_offset);
 				}
 				if(should_stop){
 					break;

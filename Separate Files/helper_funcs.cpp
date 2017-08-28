@@ -346,13 +346,20 @@ void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int 
 	seed.seed(std::chrono::system_clock::now().time_since_epoch().count());
 	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
-	std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.1*L_MEAN);
-	// std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.1*L_MEAN);
-	std::uniform_int_distribution<int> number(2, 4);
+	// std::uniform_real_distribution<float> hidden(0.10*L_MEAN, 0.20*L_MEAN);
+	std::uniform_real_distribution<float> sacornosac(0.0,1.0);
+	std::uniform_real_distribution<float> hidden(0.08*L_MEAN, 0.10*L_MEAN);
+	std::uniform_int_distribution<int> number(4, 6);
 	#pragma unroll
+	float p = 1.0; // percentage of bonds that will be having sacrificial bonds
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
-		m[i] = number(seed);
+		if (sacornosac(seed) < p){
+			m[i] = number(seed);
+		}
+		else{
+			m[i] = 0;
+		}
 		L[i] -= m[i]*hidden(seed); 
 		sacdamage[i] = 0.0;
 		damage[i] = 0.0;

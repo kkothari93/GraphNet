@@ -64,12 +64,12 @@ public:
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
 	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
-	virtual void qd_optimize(float C = 0.001, int max_iter = 800);
+	virtual void qd_optimize(float C = 0.05, int max_iter = 800);
 
 
 	float get_weight();
 	float set_weight(float);
-	bool get_stats();
+	bool get_stats(float force_threshold = 1000.0);
 	int get_current_edges();
 	virtual void plotNetwork(int, bool);
 	virtual void clear();
@@ -99,6 +99,8 @@ public:
 	int* bsideNodes; 	///<Stores index of crosslinker nodes on the bottom edge of the network sample
 	
 	bool initialized;	///<Internal variable to check if Network object is initialized
+
+	float __init_force; ///<Initial force on the plate (simulation stopped if force goes below this.)
 	
 	float weight_multiplier = 1.0; ///<Weight multiplier in case of weight increases
 	int iter_offset = 0;    ///<Offsets iterations in the figure names, if starting where a previous simulation ended.

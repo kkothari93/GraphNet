@@ -6,15 +6,15 @@
 #define SIM_TIME 40
 #define TOL 1e-6
 #define STEPS int(SIM_TIME/TIME_STEP)
-#define L_MEAN 150.0f
-#define L_STD 15.0f
+#define L_MEAN 120.0f
+#define L_STD 12.0f
 #define MAXBOUND_X 500.0f
 #define MAXBOUND_Y 100.0
 #define PAD_X MAXBOUND_X*1.03
 #define PAD_Y MAXBOUND_Y*1.03
-#define SACBONDS true
+#define SACBONDS false
 #define IMPLEMENT_PBC false
-#define FLDR_STRING "set85_sb_5to10pct"
+#define FLDR_STRING "set94_CLdot_0.05"
 #define CRACKED false
 #define RATE_DAMAGE true
 
@@ -30,8 +30,8 @@
 #define b_poly 0.1
 #define T 300.0
 #define ae 0.1
-#define delxe 0.15
-#define af 0.1
+#define delxe 0.005
+#define af 0.3
 #define delxf 0.25
 
 #endif

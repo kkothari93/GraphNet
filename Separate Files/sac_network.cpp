@@ -156,22 +156,13 @@ void sacNetwork::get_forces(bool update_damage = false) {
 				if(sacdamage[j] > 1.0){
 					if(weight_multiplier*L_MEAN > L[j]){
 						L[j] += (weight_multiplier*L_MEAN - L[j])/m[j];
-					}  
+					} 
+					// L[j] += 0.40*weight_multiplier*L_MEAN;
 					m[j] -= 1;
+					cout<<"Broke sb in edge "<<j<<"; force is = "<<force;
 					sacdamage[j] -= 1.0;
 					force = force_wlc(s, L[j]);
-					convert_to_vector(edge_force, force, rhat);
-
-					#pragma unroll
-					for (k = 0; k < DIM; k++){
-						forces[node1*DIM + k] = 0.0;
-						forces[node2*DIM + k] = 0.0;
-					}
-					#pragma unroll
-					for (k = 0; k < DIM; k++){
-						forces[node1*DIM + k] -= edge_force[k];
-						forces[node2*DIM + k] += edge_force[k];
-					}
+					cout<<", Current end/sac damage is "<<damage[j]<<"/ "<<sacdamage[j]<<endl;
 				}
 			}
 
