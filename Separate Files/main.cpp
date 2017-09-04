@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 		memset(plate_forces, 0.0, STEPS*DIM*sizeof(float));
 
-		test_network.plotNetwork(0 + test_network.iter_offset, true);
+		//test_network.plotNetwork(0 + test_network.iter_offset, true);
 
 		// dump network info to file
 		if(from_dump){ // if rebooting from previous simulation
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
 				should_stop = test_network.get_stats(test_network.__init_force);
 				curr_n_edges = test_network.get_current_edges();
 				if(curr_n_edges<=old_n_edges){
-					test_network.plotNetwork(i+test_network.iter_offset, false);
+					//test_network.plotNetwork(i+test_network.iter_offset, false);
 					//test_network.dump(i+test_network.iter_offset);
 				}
 				if(should_stop){

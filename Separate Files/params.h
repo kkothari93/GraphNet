@@ -14,7 +14,7 @@
 #define PAD_Y MAXBOUND_Y*1.03
 #define SACBONDS false
 #define IMPLEMENT_PBC false
-#define FLDR_STRING "set94_CLdot_0.05"
+#define FLDR_STRING "set96_mednetwork_1"
 #define CRACKED false
 #define RATE_DAMAGE true
 

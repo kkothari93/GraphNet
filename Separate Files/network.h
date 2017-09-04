@@ -64,7 +64,7 @@ public:
 	virtual void move_top_plate();
 	virtual void get_plate_forces(float*, int);
 	virtual void optimize(float eta = 0.1, float alpha = 0.9, int max_iter = 800);
-	virtual void qd_optimize(float C = 0.05, int max_iter = 800);
+	virtual void qd_optimize(float C = 0.001, int max_iter = 800);
 
 
 	float get_weight();
