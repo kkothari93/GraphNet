@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['r',['R',['../classNetwork.html#a5d2f66f6ebc179c11d0c977e328a0be0',1,'Network']]],
-  ['rsidenodes',['rsideNodes',['../classNetwork.html#ae72bc212cf13cfec5a571bb3007a934e',1,'Network']]]
+  ['pbc',['PBC',['../classNetwork.html#af01f8c1b894e4c26acccdc9ec0de978f',1,'Network']]],
+  ['pbc_5fvector',['PBC_vector',['../network_8h.html#accc3357fcc5154081776e5608d558d25',1,'network.h']]]
 ];

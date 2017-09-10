@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['forces',['forces',['../classNetwork.html#ad03dc973b7db966be7116065687daca9',1,'Network']]]
+  ['edges',['edges',['../classNetwork.html#a2d7c5afcfc95a72ae32cc0ee029cc506',1,'Network']]]
 ];

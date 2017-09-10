@@ -171,9 +171,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a908c065dae98093248f4d5f90c75620b"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a908c065dae98093248f4d5f90c75620b">set_weight</a> (float)</td></tr>
 <tr class="memdesc:a908c065dae98093248f4d5f90c75620b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the total length of all polymer chains according to supplied weight parameter. Also prints out the new average polymer contour lengths.  <a href="#a908c065dae98093248f4d5f90c75620b">More...</a><br /></td></tr>
 <tr class="separator:a908c065dae98093248f4d5f90c75620b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aed1fca46dfbd3e291008561cea2467d1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#aed1fca46dfbd3e291008561cea2467d1">get_stats</a> ()</td></tr>
-<tr class="memdesc:aed1fca46dfbd3e291008561cea2467d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints out certain statistics of the network object.  <a href="#aed1fca46dfbd3e291008561cea2467d1">More...</a><br /></td></tr>
-<tr class="separator:aed1fca46dfbd3e291008561cea2467d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7f7c49fec20f633f3c34641fac02ccdd"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a7f7c49fec20f633f3c34641fac02ccdd">get_stats</a> (float force_threshold=1000.0)</td></tr>
+<tr class="memdesc:a7f7c49fec20f633f3c34641fac02ccdd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints out certain statistics of the network object.  <a href="#a7f7c49fec20f633f3c34641fac02ccdd">More...</a><br /></td></tr>
+<tr class="separator:a7f7c49fec20f633f3c34641fac02ccdd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0c21387be6f914a818d74cbb5b35ca78"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#a0c21387be6f914a818d74cbb5b35ca78">get_current_edges</a> ()</td></tr>
 <tr class="memdesc:a0c21387be6f914a818d74cbb5b35ca78"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets the active (load-bearing) edges in the <a class="el" href="classNetwork.html">Network</a> object. Also prints out that info to STDOUT or piped OUT.  <a href="#a0c21387be6f914a818d74cbb5b35ca78">More...</a><br /></td></tr>
 <tr class="separator:a0c21387be6f914a818d74cbb5b35ca78"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -246,6 +246,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:ae9e725a2eaaf5468eec74ee597395bef"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#ae9e725a2eaaf5468eec74ee597395bef">initialized</a></td></tr>
 <tr class="memdesc:ae9e725a2eaaf5468eec74ee597395bef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Internal variable to check if <a class="el" href="classNetwork.html">Network</a> object is initialized.  <a href="#ae9e725a2eaaf5468eec74ee597395bef">More...</a><br /></td></tr>
 <tr class="separator:ae9e725a2eaaf5468eec74ee597395bef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af2dd6273da54e2e647800b1b9ac514e8"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#af2dd6273da54e2e647800b1b9ac514e8">__init_force</a></td></tr>
+<tr class="memdesc:af2dd6273da54e2e647800b1b9ac514e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initial force on the plate (simulation stopped if force goes below this.)  <a href="#af2dd6273da54e2e647800b1b9ac514e8">More...</a><br /></td></tr>
+<tr class="separator:af2dd6273da54e2e647800b1b9ac514e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af323420b24fbaa7ba559ce9cd7d9556c"><td class="memItemLeft" align="right" valign="top">float&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classNetwork.html#af323420b24fbaa7ba559ce9cd7d9556c">weight_multiplier</a> = 1.0</td></tr>
 <tr class="memdesc:af323420b24fbaa7ba559ce9cd7d9556c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Weight multiplier in case of weight increases.  <a href="#af323420b24fbaa7ba559ce9cd7d9556c">More...</a><br /></td></tr>
 <tr class="separator:af323420b24fbaa7ba559ce9cd7d9556c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -644,20 +647,22 @@ Public Attributes</h2></td></tr>
 
 </div>
 </div>
-<a class="anchor" id="aed1fca46dfbd3e291008561cea2467d1"></a>
+<a class="anchor" id="a7f7c49fec20f633f3c34641fac02ccdd"></a>
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">bool Network::get_stats </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">float&#160;</td>
+          <td class="paramname"><em>curr_force</em> = <code>1000.0</code></td><td>)</td>
           <td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
 <p>Prints out certain statistics of the network object. </p>
+<p>/param curr_force &ndash;&gt; takes in curr_force on plate, returns True, if curr_force &lt;= 0.1*__init_force </p>
 
 </div>
 </div>
@@ -1019,6 +1024,20 @@ Public Attributes</h2></td></tr>
 </div>
 </div>
 <h2 class="groupheader">Member Data Documentation</h2>
+<a class="anchor" id="af2dd6273da54e2e647800b1b9ac514e8"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">float Network::__init_force</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Initial force on the plate (simulation stopped if force goes below this.) </p>
+
+</div>
+</div>
 <a class="anchor" id="ae8468cce4e44a31db3d35a18648e8c9c"></a>
 <div class="memitem">
 <div class="memproto">

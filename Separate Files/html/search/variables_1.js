@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['bsidenodes',['bsideNodes',['../classNetwork.html#ae8468cce4e44a31db3d35a18648e8c9c',1,'Network']]]
+  ['a',['a',['../classCrack.html#ae2bf43e810d2d9e980fc02a776d52ade',1,'Crack']]]
 ];
