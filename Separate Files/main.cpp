@@ -54,41 +54,48 @@ int main(int argc, char* argv[]) {
 	Note: mpirun -np <numprocs> <executable> <filename.msh> 1 
 	*/
 	string path = argv[1];
+	const bool from_dump = false;
 
+	// macro for declaring the network (Initialization step)
 	#if SACBONDS
-	#define DECL_NET sacNetwork test_network(path)
+	#define DECL_NET sacNetwork test_network(path, from_dump);
 	#else
-	#define DECL_NET Network test_network(path)
+	#define DECL_NET Network test_network(path, from_dump);
 	#endif
+	
 	DECL_NET;
 
 	if(CRACKED){
 		// Specific crack
 		Crack a;
-		a.setter(MAXBOUND_X, MAXBOUND_Y/2.0, MAXBOUND_X/10.0, MAXBOUND_Y/10.0, 0.0, 1.0);
+		a.setter(MAXBOUND_X, MAXBOUND_Y/2.0, MAXBOUND_X/2.0, MAXBOUND_Y/10.0, 0.0, 1.0);
 
 		Cracklist definite_cracks(a);
 		test_network.apply_crack(definite_cracks);
-		cout<<__LINE__<<endl;
 
-		// Random cracks
+		// Random cracks. Uncomment next two lines and comment the previous four
+		// to see that effect
+
 		// Cracklist random_cracks(4);
 		// test_network.apply_crack(random_cracks);
 	}
 
-	//*argv[2] if is working now. Do not change
+	//*argv[2] is working now. Do not change
 	if (*argv[2]!='1') {
 		cout<<"Running serial version of the code: \n";
 		
-
-		// Weight goal: (Because bashing humans over their weight is not enough!)
-		float weight_goal = 1.0e6; // weight of similarly sized triangular mesh network
-		float weight_multiplier;
-		float weight = test_network.get_weight();
-		if (weight<weight_goal){
-			weight_multiplier = test_network.set_weight(weight_goal);
+		if(!from_dump){
+			// Weight goal: (Because bashing humans over their weight is not enough!)
+			// earlier weight goal was 0.6M
+			// changed to see effect of crosslinker concentration
+			float weight_goal = 0.6e6; // weight of similarly sized triangular mesh network
+			float weight_multiplier;
+			float weight = test_network.get_weight();
+			if (weight!=weight_goal){
+				weight_multiplier = test_network.set_weight(weight_goal);
+			}
 		}
-
+		
 
 		bool should_stop = test_network.get_stats();
 		int old_n_edges = test_network.get_current_edges();
@@ -100,10 +107,15 @@ int main(int argc, char* argv[]) {
 		plate_forces = (float*)malloc(sizeof(float)*DIM*STEPS);
 		memset(plate_forces, 0.0, STEPS*DIM*sizeof(float));
 
-		test_network.plotNetwork(0, true);
+		//test_network.plotNetwork(0 + test_network.iter_offset, true);
 
-		// 
-		test_network.dump(0, true);
+		// dump network info to file
+		if(from_dump){ // if rebooting from previous simulation
+			test_network.dump(0+test_network.iter_offset, false);
+		}
+		else{
+			test_network.dump(0+test_network.iter_offset, true);
+		}
 
 		// For time is endless but your time...not so much!  
 		clock_t t = clock();
@@ -113,33 +125,25 @@ int main(int argc, char* argv[]) {
 		
 		for(int i = 0; i<STEPS; i++ ){
 			// The three lines that do all the work
-			test_network.optimize();
-			test_network.move_top_plate();
+
+			test_network.qd_optimize(); // quasi-dynamic equation solution
+			// test_network.optimize(); // quasi-static equation solution
+			test_network.move_top_plate(); 
 			test_network.get_plate_forces(plate_forces, i);
 			
-			// But add more lines, just to show-off.
+			// But add more lines, just to show-off (and data-logging!).
 			if((i+1)%100 == 0){
-				should_stop = test_network.get_stats();
+				should_stop = test_network.get_stats(test_network.__init_force);
 				curr_n_edges = test_network.get_current_edges();
 				if(curr_n_edges<=old_n_edges){
-					test_network.plotNetwork(i, false);
-					test_network.dump(i);
+					//test_network.plotNetwork(i+test_network.iter_offset, false);
+					//test_network.dump(i+test_network.iter_offset);
 				}
 				if(should_stop){
 					break;
 				}
 
 
-				new_time_per_iter = float(clock()-t)/CLOCKS_PER_SEC;
-				if(i==0){
-					old_time_per_iter = new_time_per_iter;
-				}
-
-				if(new_time_per_iter < 0.1*old_time_per_iter){
-					cout<<"Seems like very few edges remain! \n";
-					break;
-				}
-				
 				cout<<"Step "<<(i+1)<<" took "<<float(clock()-t)/CLOCKS_PER_SEC<<" s\n";
 				t = clock();  // reset clock
 			}
@@ -208,6 +212,11 @@ int main(int argc, char* argv[]) {
 		float * forces_buffer; 
 		forces_buffer = (float*)malloc(r_size*sizeof(float));//buffer to gather the forces from all nodes
 		// Force buffer needed to calculate plate_forces
+
+		//damage_buffer needed for plotting
+		size_t d_size = main_network->n_elems*world_size;
+		float * damage_buffer; 
+		damage_buffer = (float*)malloc(d_size*sizeof(float));
 		
 		int * chunk_nodes_buffer = new int[main_network->chunk_nodes_len*world_size];
 		cout<<"world rank: "<<world_rank<< " chunk len = "<<main_network->chunk_nodes_len<<endl;
@@ -263,9 +272,11 @@ int main(int argc, char* argv[]) {
 
 			if((iter+1)%NSYNC == 0){
 				MPI_Gather(main_network->forces, main_network->n_nodes * DIM, MPI_FLOAT, forces_buffer, main_network->n_nodes * DIM, MPI_FLOAT, 0, MPI_COMM_WORLD);
+				MPI_Gather(main_network->damage, main_network->n_elems, MPI_FLOAT, damage_buffer, main_network->n_elems, MPI_FLOAT, 0, MPI_COMM_WORLD);
 			}
 
-			// syncing R and forces
+			float t_damage = 0.0;
+			// syncing R and forces, damage
 			if (world_rank == 0) {
 				int node_to_sync  = 0;
 				for (int i = 0; i < world_size; i += 1) {
@@ -283,8 +294,16 @@ int main(int argc, char* argv[]) {
 							}
 						}
 					}
+					// damage update
+					if((iter+1)%NSYNC == 0){
+						for(int j=0; j < main_network->n_elems; j++){
+							t_damage = main_network->damage[j];
+							main_network->damage[j] = (t_damage > damage_buffer[i*world_size + j]) ? t_damage :  damage_buffer[i*world_size + j];
+						}
+					}
 					
-				}
+				} // sync for loop ends here
+
 				if((iter+1)%NSYNC == 0){
 					cout << "Synced forces" << endl;
 					main_network->get_plate_forces(plate_forces, iter/NSYNC);

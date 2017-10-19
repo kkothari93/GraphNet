@@ -12,8 +12,10 @@ def gen_param_file(pdict, fldr_string):
     params_header += "#define STEPS %s\n" % pdict['STEPS']
     params_header += "#define L_MEAN %s\n" % pdict['L_MEAN']
     params_header += "#define L_STD %s\n" % pdict['L_STD']
-    params_header += "#define MAXBOUND %s\n" % pdict['MAXBOUND']
-    params_header += "#define PAD %s\n" % pdict['PAD']
+    params_header += "#define MAXBOUND_X %s\n" % pdict['MAXBOUND_X']
+    params_header += "#define MAXBOUND_Y %s\n" % pdict['MAXBOUND_Y']
+    params_header += "#define PAD_X %s\n" % pdict['PAD_X']
+    params_header += "#define PAD_Y %s\n" % pdict['PAD_Y']
     params_header += "#define SACBONDS %s\n" % pdict['SACBONDS']
     params_header += "#define IMPLEMENT_PBC %s\n" % pdict['IMPLEMENT_PBC']
     params_header += '#define FLDR_STRING %s\n' % fldr_string
@@ -43,7 +45,7 @@ class xlreader():
     def __init__(self, fname):
         """ Initializes the xlreader class
 
-        @ fname: takes the parameter excel file and uses the same to read the parameters 
+        @ fname: takes the parameter excel file and uses the same to read the parameters
         """
         self.__wb = xl.load_workbook(filename=fname)
         self.ws = self.__wb.active
@@ -84,8 +86,8 @@ class xlreader():
 
         """
         for i, param in enumerate(self.param_list):
-          fldr_string = '"set%d"'%(n+i)
-          fldr_name = "set%d"%(n+i)
+          fldr_string = '"%s"'%(param['FLDR_STRING'])
+          fldr_name = "%s"%(param['FLDR_STRING'])
           if not os.path.exists(fldr_name):
             os.makedirs(fldr_name)
           gen_param_file(param, fldr_string)
@@ -96,7 +98,7 @@ def main(n):
     """Main script
 
     Takes in parameter n to identify where the set indexing will start
-    
+
     """
     a = xlreader("param_list.xlsx")
     a.compile(n)

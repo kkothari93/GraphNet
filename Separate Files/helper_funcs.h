@@ -55,6 +55,8 @@ inline float getnorm(const float* vec, const int dim = DIM){
 
 void mapping(int& edge_counter, int elem_type, int n_vertices, stringstream& input, int* edges);
 
+string read_dump(int& n_nodes, int& n_elems, string& fname);
+
 void mapping(int& edge_counter, int elem_type);
 
 void read_n(int& n_nodes, int& n_elems, string& fname);
@@ -120,10 +122,6 @@ inline float dist(const float* r1, const float* r2){
 void forcevector(float* result, float* r1, float* r2, float L);
 
 
-inline float kfe(float force_mag){
-	return ae * exp(force_mag * delxe / kB / T);
-}
-
 inline bool ismember(int item, int* array,size_t size){
 	bool is_inside = false; 
 	for(int k=0; k<size; k++){if(array[k]==item){is_inside = true; break;}}
@@ -171,6 +169,10 @@ void write_to_file(string& fname, t* arr, int rows, int cols){
 
 inline float kf(float force){
 	return af*expf(force*delxf/kB/T);
+}
+
+inline float kfe(float force_mag){
+	return ae*expf(force_mag*delxe/kB/T);
 }
 
 void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int n_elems);

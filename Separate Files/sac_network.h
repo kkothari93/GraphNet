@@ -35,9 +35,9 @@ class sacNetwork : virtual public Network{
 		sacNetwork();
 		~sacNetwork();
 		sacNetwork(sacNetwork const &);
-		sacNetwork(string& fname);
+		sacNetwork(string& fname, bool from_dump = false);
 		void clear();
-		void malloc_network(string&);
+		void malloc_network();
 		void load_network(string&);
 		virtual void get_forces(bool) override;
 

@@ -20,9 +20,17 @@ sacNetwork::sacNetwork(){
 /// \param fname --> takes a filename and instantiates Network object
 ///
 // ----------------------------------------------------------------------- 
-sacNetwork::sacNetwork(string& fname){
+sacNetwork::sacNetwork(string& fname, bool from_dump){
 	initialized = false;
-	load_network(fname);
+	if(from_dump){
+		load_from_dump(fname);
+	}
+
+	else{
+		load_network(fname);
+		iter_offset = 0;
+	}
+
 	initialized = true;
 }
 
@@ -85,11 +93,11 @@ void sacNetwork::get_forces(bool update_damage = false) {
 	float force;
 
 
-	memset(forces, 0.0, n_nodes*DIM*sizeof(forces));
+	memset(forces, 0.0, n_nodes*DIM*sizeof(float));
 
 	for (j = 0; j < n_elems; j++){
-		// read the two points that form the edge // 2 because 2 points make an edge! Duh.
-		node1 = edges[j * 2]; 
+		// read the two points that form the edge 
+		node1 = edges[j * 2]; // 2 because 2 points make an edge! Duh.
 		node2 = edges[j * 2 + 1];
 		
 		// check if pair exists
@@ -138,15 +146,32 @@ void sacNetwork::get_forces(bool update_damage = false) {
 		//update damage if needed
 		if (update_damage){
 			if(m[j] > 0){
-				sacdamage[j] += kf(force)*TIME_STEP;
+				if(RATE_DAMAGE){
+					sacdamage[j] += kf(force)*TIME_STEP;
+				}
+				else {
+					sacdamage[j] = s/L[j]/.72;
+				}
+
 				if(sacdamage[j] > 1.0){
-					L[j] += (L_MEAN - L[j])/m[j] ; 
+					if(weight_multiplier*L_MEAN > L[j]){
+						L[j] += (weight_multiplier*L_MEAN - L[j])/m[j];
+					} 
+					// L[j] += 0.40*weight_multiplier*L_MEAN;
 					m[j] -= 1;
-					sacdamage[j] = 0.0;
+					cout<<"Broke sb in edge "<<j<<"; force is = "<<force;
+					sacdamage[j] -= 1.0;
 					force = force_wlc(s, L[j]);
+					cout<<", Current end/sac damage is "<<damage[j]<<"/ "<<sacdamage[j]<<endl;
 				}
 			}
-			damage[j] += kfe(force)*TIME_STEP;
+
+			if(RATE_DAMAGE){
+				damage[j] += kfe(force)*TIME_STEP;
+			}
+			else {
+				damage[j] = s/L[j]/0.9;
+			}
 			
 			//remove edge ... set to special value
 			if(damage[j] > 1.0){
@@ -154,7 +179,7 @@ void sacNetwork::get_forces(bool update_damage = false) {
 				<<edges[j*2]<<" and "<<edges[2*j +1]<<" F,s/L = "<<force \
 				<<", "<<s/L[j]<<endl;
 				edges[j*2] = -1; edges[j*2+1] = -1;
-		}
+			}
 		}
 	}
 
@@ -165,9 +190,9 @@ void sacNetwork::get_forces(bool update_damage = false) {
 /// class variables.
 ///
 // -----------------------------------------------------------------------
-void sacNetwork::malloc_network(string& fname){
+void sacNetwork::malloc_network(){
 	
-	Network::malloc_network(fname);
+	Network::malloc_network();
 	size_t sf = sizeof(float);
 	size_t si = sizeof(int);
 	m = (int*)malloc(n_elems*si);
@@ -191,9 +216,12 @@ void sacNetwork::load_network(string& fname) {
 		cout<<"File does not exist!\n";
 		return;
 	}
+
+	// read n_nodes, n_elems
+	read_n(n_nodes, n_elems, fname);
 	
 	//Malloc all variables
-	malloc_network(fname);
+	malloc_network();
 
 	cout<<"Malloc was successful!\n";
 

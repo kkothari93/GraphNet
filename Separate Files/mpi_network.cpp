@@ -269,18 +269,18 @@ void MPI_Network::get_forces(bool update_damage = false) {
 			forces[node1*DIM + k] -= edge_force[k];
 			forces[node2*DIM + k] += edge_force[k];
 		}
-		//update damage if needed
+
 		//update damage if needed
 		if (update_damage){
 			if(RATE_DAMAGE){
 				if(SACBONDS){
 					if(m[j] > 0){
 						sacdamage[j] += kf(force)*TIME_STEP;
-					if(sacdamage[j] > 1.0){
-						L[j] += (L_MEAN - L[j])/m[j] ; 
-						m[j] -= 1;
-						sacdamage[j] = 0.0;
-						force = force_wlc(s, L[j]);
+						if(sacdamage[j] > 1.0){
+							L[j] += (L_MEAN*weight_multiplier - L[j])/m[j] ; 
+							m[j] -= 1;
+							sacdamage[j] -= 1.0;
+							force = force_wlc(s, L[j]);
 						}
 					}
 				}
@@ -295,8 +295,8 @@ void MPI_Network::get_forces(bool update_damage = false) {
 				}
 			}
 			else{
-				damage[j] = s/L[j];
-				if(damage[j] > 0.9){
+				damage[j] = s/L[j]/0.9;
+				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
 					<<", "<<s/L[j]<<endl;

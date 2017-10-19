@@ -89,6 +89,81 @@ void mapping(int& edge_counter, int elem_type){
 
 }
 
+
+// ----------------------------------------------------------------------- 
+/// \brief Reads the number of nodes and poly chains left at the end of 
+/// previous simulation. The code does not take care of parameters. Assumes
+/// user will change params.h file while restarting the previous simulation.
+///
+// -----------------------------------------------------------------------
+string read_dump(int& n_nodes, int& n_elems, string& dname){
+
+	// reset n_nodes and n_elems
+	n_nodes = 0;
+	n_elems = 0;
+
+	// this will return the last iter stored in the dump
+	string ret_last_iter;
+
+	bool read=false;
+	string line;
+	ifstream dump;
+	dump.open(dname);
+
+	getline(dump, line);
+
+	while(!dump.eof()){
+		getline(dump, line);
+		if(line.find("INFO FOR ITER") != string::npos){
+			getline(dump, line);
+			ret_last_iter = line;
+
+		}
+	}
+
+
+
+	// Start at the beginning of the file
+	dump.close();
+	dump.open(dname);
+
+
+	// Get to the last iter
+	while(!dump.eof()){
+		getline(dump, line); 
+
+		if(line == ret_last_iter){ // get to last iter
+
+			getline(dump,line); // skip line START NODE POSITIONS
+			getline(dump,line); // get to the first node
+			if(dump.eof()){
+				break;
+			}
+
+			while(line.find("END NODE POSITIONS") == string::npos){
+				getline(dump, line);
+				n_nodes++;
+			}
+			// tell user how many nodes were found -- debug
+			cout<<"Found "<<n_nodes<<" nodes in the dump!"<<endl;
+
+			getline(dump,line); // skip line START ACTIVE EDGES
+			getline(dump,line); // get to the first edge
+			while(line.find("END ACTIVE EDGES") == string::npos){
+				getline(dump, line);
+				n_elems++;
+			}
+			// tell user how many nodes were found -- debug
+			cout<<"Found "<<n_elems<<" elems in the dump!"<<endl;
+
+			// exit loop
+			break;
+		}
+	}
+	dump.close();
+	return ret_last_iter;
+}
+
 // ----------------------------------------------------------------------- 
 /// \brief Reads the number of nodes and edges according to the .msh file.
 /// Useful for allocating memory in the class' constructors.
@@ -177,12 +252,7 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 		}
 
 	}while(!read_num_nodes);
-	// for(int i=0; i<num_nodes; i++){
-	// 	cout<<endl;
-	// 	for(int d =0; d<DIM; d++){
-	// 		cout<<R[i*DIM + d]<<"\t";
-	// 	}
-	// }
+
 
 	do{
 		getline(source, line);
@@ -227,8 +297,9 @@ void take_input(float* R, int* edges, int n_nodes, int n_elems, string& fname) {
 // -----------------------------------------------------------------------
 void __init__(float* L, float* damage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
-	// std::normal_distribution<float> generator(L_MEAN, L_STD);
+	seed.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
 	#pragma unroll
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
@@ -272,14 +343,23 @@ float getabsmax(float* arr, size_t sizeofarr){
 // -----------------------------------------------------------------------
 void __init__(float* L, int* m, float* damage, float* sacdamage, bool* PBC, int n_elems){
 	std::default_random_engine seed;
-	// std::normal_distribution<float> generator(L_MEAN, L_STD);
-	std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
-	std::uniform_real_distribution<float> hidden(0.05*L_MEAN, 0.01*L_MEAN);
-	std::uniform_int_distribution<int> number(2, 4);
+	seed.seed(std::chrono::system_clock::now().time_since_epoch().count());
+	std::normal_distribution<float> generator(L_MEAN, L_STD);
+	// std::uniform_real_distribution<float> generator(L_MEAN - L_STD, L_MEAN + L_STD);
+	// std::uniform_real_distribution<float> hidden(0.10*L_MEAN, 0.20*L_MEAN);
+	std::uniform_real_distribution<float> sacornosac(0.0,1.0);
+	std::uniform_real_distribution<float> hidden(0.08*L_MEAN, 0.10*L_MEAN);
+	std::uniform_int_distribution<int> number(4, 6);
 	#pragma unroll
+	float p = 1.0; // percentage of bonds that will be having sacrificial bonds
 	for(int i=0; i<n_elems; i++){
 		L[i] = generator(seed);
-		m[i] = number(seed);
+		if (sacornosac(seed) < p){
+			m[i] = number(seed);
+		}
+		else{
+			m[i] = 0;
+		}
 		L[i] -= m[i]*hidden(seed); 
 		sacdamage[i] = 0.0;
 		damage[i] = 0.0;

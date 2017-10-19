@@ -35,10 +35,18 @@ Network::Network(Network const & source) {
 /// \param fname --> takes a filename and instantiates Network object
 ///
 // ----------------------------------------------------------------------- 
-Network::Network(string& fname) {
+Network::Network(string& fname, bool from_dump) {
 
 	initialized = false;
-	load_network(fname);
+	if(from_dump){
+		load_from_dump(fname);
+	}
+
+	else{
+		load_network(fname);
+		iter_offset = 0;
+	}
+
 	initialized = true;
 
 }
@@ -116,12 +124,9 @@ void Network::build_network() {
 /// This is called by the Network constructor if the same is called using
 /// a filepath string. User is discouraged from directly calling this function.
 /// 
-/// \param fname (string) --> string of the .msh filepath
-/// 
+///  
 // -----------------------------------------------------------------------
-void Network::malloc_network(string& fname){
-	
-	read_n(n_nodes, n_elems, fname);
+void Network::malloc_network(){
 
 	int max_nodes_on_a_side = int(sqrt(n_nodes)*2.0);
 	// add memory for side connections
@@ -148,18 +153,142 @@ void Network::malloc_network(string& fname){
 	n_elems -= 3*max_nodes_on_a_side;
 }
 
+
+
+// ----------------------------------------------------------------------- 
+/// \brief This function loads the last network state from a dump file.
+/// This is called by the Network constructor load_from_dump is set to true.
+/// Do not load from dump if network has already broken.
+/// 
+/// \param dname (string) --> dump filename
+/// 
+// -----------------------------------------------------------------------
+void Network::load_from_dump(string& dname){
+	
+	string last_iter = read_dump(n_nodes, n_elems, dname);
+	iter_offset = stoi(last_iter);
+
+	cout<<"Restarting from iter "<<iter_offset<<endl;
+
+
+	malloc_network();
+
+	//read file
+	ifstream dump;
+	string line;
+	dump.open(dname);
+
+	stringstream out;
+	//read R positions
+	while(!dump.eof()){
+		getline(dump, line);
+		if(line==last_iter){
+			break;	
+		}
+	}
+
+	// added to skip over line "START NODE POSITIONS"
+	getline(dump, line);
+
+	// read R positions
+	int index;
+	float x, y;
+	for(int i=0; i<n_nodes; i++){
+		getline(dump, line);
+		out<<line;
+		out>>index;
+		out>>x>>y;
+		out.str(std::string());
+		out.clear();
+		//cout<<index<<", "<<x<<", "<<y<<endl;
+		R[DIM*index] = x;
+		R[DIM*index+ 1] = y;
+	}
+	// --finished reading R
+
+	while(!dump.eof()){
+		getline(dump, line);
+		if(line.find("START ACTIVE EDGES")!=string::npos){
+			break;	
+		}
+	}
+
+
+	// read edges
+	int node1, node2, p;
+	float d, s;
+	for(int i=0; i<n_elems; i++){
+		getline(dump, line);
+		
+		out<<line;
+		out>>index>>node1>>node2>>d>>p;
+		out.str(std::string());
+		out.clear();
+
+		edges[2*i] = node1;
+		edges[2*i + 1] = node2;
+		if(node1 >= 0 && node2 >= 0){	
+			s = dist(&R[node1*DIM], &R[node2*DIM]);
+
+			if(d!=0){
+				L[i] = s/d;
+			}
+			else{
+				cout<<"could not find L for "<<node1<<", "<<node2<<endl;
+				L[i] = L_MEAN; // should not be the case!
+			}
+		}		
+	
+		damage[i] = d;
+
+		PBC[i] = (p==0) ? false : true;
+	}
+	// --finished reading edges
+
+	dump.close();
+
+	float max_y = 0;
+
+	// This will find the max_y for the loaded iter from dump file
+	// The max_y is the position for the top plate
+	for(int i = 0; i<n_nodes; i++){
+		y = R[DIM*i + 1];
+		if(y>max_y){
+			max_y = y;
+		}
+	}
+
+	// side_nodes
+	side_nodes(0.0, max_y);
+
+	// find moving nodes
+	n_moving = n_nodes - n_tside - n_bside;
+	moving_nodes = (int*)malloc(sizeof(int)*n_moving);
+	
+	int c = 0;
+	for(int i =0; i<n_nodes; i++){
+		if(!ismember(i, tsideNodes, n_tside) && !ismember(i, bsideNodes, n_bside)){
+			moving_nodes[c] = i;
+			c++;
+		}
+	}
+	cout<<"We have "<<c<<" moving nodes\n";
+}
+
+
+
 // ----------------------------------------------------------------------- 
 /// \brief Gives the boundary nodes for a network.
 ///
 // -----------------------------------------------------------------------
-void Network::side_nodes(){
+void Network::side_nodes(float max_x, float max_y){
 
 	// make the list of side nodes
 	for(int i=0; i<n_nodes; i++){
 		if(fabs(R[i*DIM]-0.0)<TOL){n_lside++;}
-		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){n_rside++;}
+		if(fabs(R[i*DIM]-max_x)<TOL){n_rside++;}
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){n_bside++;}
-		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){n_tside++;}
+		if(fabs(R[i*DIM + 1]-max_y)<TOL){n_tside++;}
 	}
 
 	size_t si = sizeof(int);
@@ -172,11 +301,173 @@ void Network::side_nodes(){
 
 	for(int i=0; i<n_nodes; i++){
 		if(fabs(R[i*DIM]-0.0)<TOL){lsideNodes[n_lside]=i; n_lside++;}
-		if(fabs(R[i*DIM]-MAXBOUND_X)<TOL){rsideNodes[n_rside]=i; n_rside++;}
+		if(fabs(R[i*DIM]-max_x)<TOL){rsideNodes[n_rside]=i; n_rside++;}
 		if(fabs(R[i*DIM + 1]-0.0)<TOL){bsideNodes[n_bside]=i; n_bside++;}
-		if(fabs(R[i*DIM + 1]-MAXBOUND_Y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
+		if(fabs(R[i*DIM + 1]-max_y)<TOL){tsideNodes[n_tside]=i; n_tside++;}
 	}
 }
+
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds y-directional long range edges to the network. Chooses two nodes
+/// uniformly at random from the n_add divisions in x_direction such that the 
+/// distance between them is at least 0.25*L_MEAN and at max L_MEAN
+///
+/// \param n_add number of long range y-connections to add
+/// \param prestrech float between 0.01,0.99 to give initial x/L of these long range bonds
+/// If value is not between (0.01,0.99), 0.25 is assumed 
+///
+// -----------------------------------------------------------------------
+void Network::add_long_range_egdes_y(int n_add, float prestretch){
+	// Add structured edges in y direction. To do so, first create 2*n_add circles
+	// then find a node in the circle radius (chosen here to be L_STD) and add an edge
+	// between these two nodes
+	float* centers = new float[n_add*2*2]; // 2 times n_add circles, each taking 
+										   // two floats to store centers
+	
+	cout<<"Asked to add "<<n_add<<" more edges!\n";
+
+	if(n_add >= n_elems/2){
+		cout<<"You're asking for too many long range bonds,"
+				" can't do it! I will add none and continue..."<<endl;
+	}
+	
+	if(prestretch < 0.01 || prestretch > 0.99){
+		cout<< "Value for prestretch needs to be between 0.01 and 0.99\n";
+		prestretch = 0.25;
+	}
+
+	// fill the centers
+	for(int i = 0 ; i <n_add*2 ; i++){
+		if(i<n_add){
+			centers[2*i] = MAXBOUND_X/2/n_add * (2*i+1);
+			centers[2*i + 1] = MAXBOUND_Y/4;
+		}
+		if(i>=n_add){
+			centers[2*i] = MAXBOUND_X/2/n_add * (2*(i - n_add)+1);
+			centers[2*i + 1] = 3*MAXBOUND_Y/4;	
+		}
+		cout<<centers[2*i]<<"\t"<<centers[2*i+1]<<endl;
+	}
+
+
+	// create circles for these centers
+	Crack* circles = new Crack[2*n_add]();
+	for(int i=0; i<2*n_add; i++){
+		circles[i].setter(centers[2*i], centers[2*i+1], MAXBOUND_Y/10, MAXBOUND_Y/10, 1, 0);
+	}
+
+	// fill one id per circle
+	int* node_per_circle = new int[2*n_add](); // value initialises to zero: ISO C++03 5.3.4[expr.new]/15
+	for(int i = 0; i < 2*n_add; i++){
+		node_per_circle[i] = 0;
+	}
+	
+
+	for(int i = 4; i<n_nodes; i++){
+		for(int k =0; k<2*n_add; k++){
+			if(node_per_circle[k] != 0){
+				continue;
+			}
+			if(circles[k].inside(&R[DIM*i])<=0){
+				node_per_circle[k] = i;
+			}
+		}
+	}
+
+	float s; // will store distances
+	//Add edges between selected nodes
+	for(int i = 0; i < n_add; i++){
+	
+		edges[2*n_elems] = node_per_circle[i];
+		edges[2*n_elems + 1] = node_per_circle[i + n_add];
+
+		// Calculate distance
+		s = dist(&R[node_per_circle[i]*DIM], &R[node_per_circle[i + n_add]*DIM]);
+
+		// update the contour lengths according to position
+		L[n_elems] = s/prestretch;
+
+		// update PBC;
+		PBC[n_elems] =  false;
+
+		// update damage
+		damage[n_elems] = 0;
+
+		// increment n_elems
+		n_elems++;
+	}
+
+	delete[] centers;
+	centers = NULL;
+	delete[] node_per_circle;
+	node_per_circle = NULL;
+	delete[] circles;
+	circles = NULL;
+}
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Adds random long range edges to the network. Chooses two nodes
+/// uniformly at random and adds an edge with x/L = 0.25 (i.e. prestressed)
+///
+// -----------------------------------------------------------------------
+void Network::add_long_range_egdes_random(int n_add, float prestretch){
+	
+	cout<<"Asked to add "<<n_add<<" more edges!\n";
+	int node1, node2;
+	float s = 0;
+
+	if(n_add >= n_elems/2){
+		cout<<"You're asking for too many long range bonds,"
+				" can't do it! I will add none and continue..."<<endl;
+	}
+
+	if(prestretch < 0.01 || prestretch > 0.99){
+		cout<< "Value for prestretch needs to be between 0.01 and 0.99\n";
+		prestretch = 0.25;
+	}
+
+	
+	srand(time(NULL));
+
+	for(int i = 0; i < n_add; i++){
+		while(s<L_MEAN/4 || s>L_MEAN){ 
+			// L_MEAN/4, L_MEAN is arbitrary threshold to keep the edge long range
+
+			// random number between [min; max] 
+			// min = 4 (all corner nodes); max = n_nodes - 1
+			node1 = rand()%(n_nodes - 4) + 4;
+			node2 = rand()%(n_nodes - 4) + 4;
+		
+			s = dist(&R[node1*DIM], &R[node2*DIM]);
+		}
+
+
+		cout<<"Adding edge between "<<node1<<", "<<node2<<endl;
+
+		// add nodes to edges array
+		edges[n_elems*2] = node1;
+		edges[n_elems*2 + 1] = node2;
+
+		// update the contour lengths according to position
+		L[n_elems] = s/prestretch;
+
+		// update PBC;
+		PBC[n_elems] =  false;
+
+		// update damage
+		damage[n_elems] = 0;
+
+		// increment n_elems
+		n_elems++;
+
+		s = 0;
+	}
+
+}
+
 
 // ----------------------------------------------------------------------- 
 /// \brief Removes duplicate edges. A much more efficient version can be made
@@ -188,7 +479,8 @@ void Network::remove_duplicates(int& n_elems){
 	int node1, node2;
 	int d_node1, d_node2, i,k;
 
-	for(i=0;i<n_elems-1;i++){
+	for(i=0;i<n_elems;i++){
+		// here n_elems is needed instead of n_elems-1 for correct counting in counter
 		node1 = edges[2*i];
 		node2 = edges[2*i+1];
 		if(node1!=-2 && node2!=-2){
@@ -203,7 +495,7 @@ void Network::remove_duplicates(int& n_elems){
 			counter++;
 		}
 	}
-	cout<<counter<<endl;
+	
 	int* buffer = new int[2*counter];
 	for(i=0, k=0;i<n_elems;i++){
 		node1 = edges[2*i];
@@ -214,7 +506,7 @@ void Network::remove_duplicates(int& n_elems){
 			k++;
 		}
 	}
-
+	
 	for(i=0, k=0;i<n_elems;i++){
 		if(k<counter){
 			edges[2*i] = buffer[2*k];
@@ -226,6 +518,7 @@ void Network::remove_duplicates(int& n_elems){
 			edges[2*i+1] = -1;
 		}
 	}
+
 	cout<<n_elems-counter<<" duplicates removed!\n";
 	n_elems = counter;
 	delete[] buffer;
@@ -251,9 +544,12 @@ void Network::load_network(string& fname) {
 		cout<<"File does not exist!\n";
 		return;
 	}
+
+	// read n_nodes, n_elems
+	read_n(n_nodes, n_elems, fname);
 	
 	//Malloc all variables
-	malloc_network(fname);
+	malloc_network();
 
 	cout<<"Malloc was successful!\n";
 
@@ -263,6 +559,8 @@ void Network::load_network(string& fname) {
 	// remove duplicate edges
 	remove_duplicates(n_elems);
 
+	// add long range connections
+	// add_long_range_egdes_y(int(log(n_elems)), 0.25);
 
 	cout<<"Mesh read successfully!\n";
 	cout<<"Number of nodes are: "<<n_nodes<<endl;
@@ -294,7 +592,6 @@ void Network::load_network(string& fname) {
 		this->make_edge_connections(15.0);
 		cout<<"Number after new connections made: "<<n_elems<<endl;
 	}
-	cout<<__LINE__<<endl;
 }
 
 // ----------------------------------------------------------------------- 
@@ -446,16 +743,16 @@ void Network::get_forces(bool update_damage = false) {
 				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
-					<<", "<<s/L[j]<<endl;
+					<<", "<<s<<"/"<<L[j]<<endl;
 					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
 			}
 			else{
-				damage[j] = s/L[j];
-				if(damage[j] > 0.9){
+				damage[j] = s/L[j]/0.9;
+				if(damage[j] > 1.0){
 					cout<<"Breaking bond between "
 					<<edges[j*2]<<" and "<<edges[2*j +1]<<" F, s/L = "<<force \
-					<<", "<<s/L[j]<<endl;
+					<<", "<<s<<"/"<<L[j]<<endl;
 					edges[j*2] = -1; edges[j*2+1] = -1;
 				}
 			}
@@ -510,7 +807,7 @@ void Network::apply_crack(Cracklist & alist) {
 	cracked = true;
 	std::default_random_engine seed;
 	std::uniform_real_distribution<float> generator(0, 1);
-	float equation = 0;
+	float val = 0;
 	//make clusters
 	//vector<int> within_circle;
 	vector<int> nodes_to_remove;
@@ -523,28 +820,13 @@ void Network::apply_crack(Cracklist & alist) {
 	for(int ci = 0; ci < alist.n_cracks; ci++){
 		crack.setter(alist[ci]);
 		for(int i=0; i<n_nodes; i++){
-			x = R[i*DIM];
-			y = R[i*DIM+1];
-			x -= crack.c[0];
-			y -= crack.c[1];
-			si = crack.trig[0];
-			co = crack.trig[1];
-			equation = pow((x*co + y*si)/crack.a[0], 2)+ \
-						pow((x*si - y*co)/crack.a[1], 2);
-
-			equation -= 1.0;
-
-			if(equation<=0.0){
+			val = crack.inside(&R[i*DIM]);
+			if(val<=0.0){
 				nodes_to_remove.push_back(i);
 			}
 		}
 	}
 
-	// for(int i= 0; i < n_nodes; i++){
-	// 	if(contains(within_circle, i)){
-	// 		nodes_to_remove.push_back(i);
-	// 	}
-	// }
 
 	for(int i = 0; i<n_elems; i++){
 		node1 = edges[2*i];
@@ -594,10 +876,10 @@ void Network::plotNetwork(int iter_step, bool first_time){
 			node1 = edges[j * 2]; 
 			node2 = edges[j * 2 + 1];
 			
-			// // check if pair exists
-			// if(node1 == -1 || node2 == -1) {
-			// 	continue;
-			// }
+			// check if pair exists
+			if(node1 == -1 || node2 == -1) {
+				continue;
+			}
 
 			// read the positions
 			#pragma unroll
@@ -640,30 +922,30 @@ void Network::plotNetwork(int iter_step, bool first_time){
 		f.close();
 	}
 	else{
-	for(int i = 0; i<n_elems; i++){
-		c = damage[i];
-		node1 = edges[2*i];
-		node2 = edges[2*i+1];
+		for(int i = 0; i<n_elems; i++){
+			c = damage[i];
+			node1 = edges[2*i];
+			node2 = edges[2*i+1];
 
-		if(node1!=-1 && node2!=-1){
-			for(int d = 0; d<DIM; d++){
-					f<<R[node1*DIM+d]<<"\t";
-				}
-				f<<c<<endl;
-			if(!PBC[i]){
+			if(node1!=-1 && node2!=-1){
 				for(int d = 0; d<DIM; d++){
-					f<<R[node2*DIM+d]<<"\t";
+						f<<R[node1*DIM+d]<<"\t";
+					}
+					f<<c<<endl;
+				if(!PBC[i]){
+					for(int d = 0; d<DIM; d++){
+						f<<R[node2*DIM+d]<<"\t";
+					}
 				}
+				else{
+					for(int d = 0; d<DIM; d++){
+						f<<(R[node1*DIM+d]+10)<<"\t";
+					}				
+				}
+			f<<c<<endl<<endl;
 			}
-			else{
-				for(int d = 0; d<DIM; d++){
-					f<<(R[node1*DIM+d]+10)<<"\t";
-				}				
-			}
-		f<<c<<endl<<endl;
 		}
-	}
-	f.close();
+		f.close();
 	}
 	//Plot to h
 	float aspect_ratio = (MAXBOUND_X)/(R[tsideNodes[0]*DIM+1]); 
@@ -719,9 +1001,10 @@ int Network::get_current_edges(){
 // ----------------------------------------------------------------------- 
 /// \brief Prints out certain statistics of the network object.
 ///
-/// 
+/// /param curr_force --> takes in curr_force on plate, returns True,
+/// 					  if curr_force <= 0.1*__init_force
 // -----------------------------------------------------------------------
-bool Network::get_stats(){
+bool Network::get_stats(float curr_force){
 	int node1, node2;
 	int j, k, id; // loop variables
 	float r1[DIM]; float r2[DIM] ;
@@ -816,8 +1099,12 @@ bool Network::get_stats(){
 	cout<<"node-node x/L max: "<<max_t<<endl;
 
 
-	if((float)c/(float)n_elems < 0.02){
+	if((float)c/(float)n_elems < 0.05){
 		cout<<"Too few edges remain in given mesh! Exiting...\n";
+		return true;
+	}
+	if(fabs(curr_force) <= 0.1*fabs(__init_force)){
+		cout<<"Force too low! Exiting...\n";
 		return true;
 	}
 	return false;
@@ -832,7 +1119,7 @@ float Network::get_weight(){
 	float sum_length = 0.0;
 	for(int i = 0; i < n_elems; i++){
 		if(edges[i*2] != -1 && edges[i*2 + 1]!=-1){
-			sum_length += L[i];
+			sum_length += L_MEAN;
 		}
 	}
 	cout<<"\nNetwork weight is "<<sum_length<<"\n";
@@ -855,6 +1142,7 @@ float Network::set_weight(float weight){
 	}
 	cout<<"\n Network weight reset to "<<weight<<"\n";
 	cout<<"Average L now is : "<<weight/n_elems<<"\n";
+	weight_multiplier = alpha;
 	return alpha;
 }
 
@@ -873,6 +1161,47 @@ void Network::move_top_plate(){
 			R[node*DIM + d] += TIME_STEP*vel[d]; 
 		}
 	}
+}
+
+
+// ----------------------------------------------------------------------- 
+/// \brief Equilibriates the Network object using an Implicit scheme based
+/// on solving the quasi-dynamic equation
+///
+/// /param C --> damping coefficient
+/// /param max_iter --> maximum allowable iterations in the implicit scheme
+// -----------------------------------------------------------------------
+void Network::qd_optimize(float C, int max_iter){
+	float* Rp1 = new float[n_moving*DIM]();
+	float g;
+	int id, d, node;
+
+	for(int step =0; step<max_iter; step++){
+		// Predictor step
+		get_forces(false);
+		for(id = 0; id < n_moving; id++){
+			node = moving_nodes[id];
+			#pragma unroll
+			for(d = 0; d<DIM; d++){
+				Rp1[id*DIM + d] = R[node*DIM + d];
+				g = forces[DIM*node+d];
+				R[node*DIM + d] += g/C * TIME_STEP;
+			}		
+		}
+		// Corrector step
+		get_forces(false);
+		for(id = 0; id < n_moving; id++){
+			node = moving_nodes[id];
+			#pragma unroll
+			for(d = 0; d<DIM; d++){
+				g = forces[DIM*node+d];
+				R[node*DIM + d] = Rp1[id*DIM + d] + g/C * TIME_STEP;
+			}		
+		}
+	}
+	// update damage
+	get_forces(true);
+	delete[] Rp1;
 }
 
 // ----------------------------------------------------------------------- 
@@ -932,6 +1261,9 @@ void Network::get_plate_forces(float* plate_forces, int iter){
 		if(DIM>2){
 			plate_forces[iter*DIM+2] = forces[node*DIM + 2];
 		}
+	}
+	if(iter==0){
+		__init_force = plate_forces[1]; // initial force
 	}
 }
 

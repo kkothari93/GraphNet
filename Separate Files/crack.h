@@ -25,6 +25,7 @@ public:
 	Crack(); //: Crack(2) {}
 	void setter(float, float,float, float,float, float);
 	void setter(Crack &);
+	float inside(float* R);
 	virtual ~Crack();
 	Crack(Crack const & source);
 	Crack const & operator=(Crack const & other);
