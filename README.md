@@ -6,7 +6,7 @@ This is a 2D, worm-like chain model network simulation package based on transiti
 
 * This repo is the backbone for the work submitted to JAM with title 'Mechanical response of 2D polymer networks: role of topology, rate dependence and damage accumulation'
 * Version 1.0
-* [Documentation](https://graphnetdocs.io/GraphNet/)
+* [Documentation](https://kkothari93.github.io/GraphNet/)
 
 ### Dependencies ###
 
